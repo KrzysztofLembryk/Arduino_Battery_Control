@@ -4,11 +4,12 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include "constants.h"
+#include "char_arr_utils.h"
 
 void wait_for_few_seconds();
 void init_WiFi();
 void recv_charging_data_from_server(int *charging_times_arr,
-                             bool *is_charging_arr);
+                                    bool *is_charging_arr);
 
 void setup()
 {
@@ -34,22 +35,26 @@ void loop()
   if (current_millis - prev_millis >= INTERVAL_GET_DATA_FROM_SERVER)
   {
     prev_millis = current_millis;
-    recv_charging_data_from_server(charging_times_arr,
-                            is_charging_arr);
+    recv_charging_data_from_server(charging_times_arr, is_charging_arr);
 
     Serial.println(is_charging_arr[0]);
     Serial.println(charging_times_arr[0]);
   }
-  
 }
 
 void recv_charging_data_from_server(int *charging_times_arr,
-                             bool *is_charging_arr)
+                                    bool *is_charging_arr)
 {
   static WiFiClient client;
   static HTTPClient http;
+  static char server_endpoint_name[100];
 
-  if (http.begin(client, SERVER_ADDRESS + CHARGING_DATA_ENDPOINT))
+  CharArrUtils::concat_char_arr(server_endpoint_name,
+                                SERVER_ADDRESS,
+                                CHARGING_DATA_ENDPOINT,
+                                100);
+
+  if (http.begin(client, server_endpoint_name))
   {
     Serial.print("[HTTP] GET...\n");
 
@@ -59,15 +64,38 @@ void recv_charging_data_from_server(int *charging_times_arr,
     // httpCode will be negative on error
     if (httpCode > 0)
     {
-      static String recv_data;
       Serial.printf("[HTTP] GET... code: %d\n", httpCode);
+      static char recv_buff[600] = {0};
 
       if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)
       {
+
+        CharArrUtils::clear_arr(recv_buff, 600);
+
+        int incoming_data_size = http.getSize();
+        WiFiClient *stream = http.getStreamPtr();
+
+        while (http.connected() &&
+               (incoming_data_size > 0 || incoming_data_size == -1))
+        {
+          size_t available_data_size = stream->available();
+
+          if (available_data_size)
+          {
+            int c = stream->readBytes(recv_buff, (
+                                    (available_data_size > sizeof(recv_buff)) ? 
+                                    sizeof(recv_buff) : available_data_size));
+
+            if (incoming_data_size > 0)
+            {
+              incoming_data_size -= c;
+            }
+          }
+        }
+
+        Serial.printf("recv data size: %d\n", strlen(recv_buff));
         JsonDocument doc;
-        recv_data = http.getString();
-        Serial.println(recv_data.length());
-        DeserializationError json_error = deserializeJson(doc, recv_data);
+        DeserializationError json_error = deserializeJson(doc, recv_buff);
 
         if (json_error)
         {

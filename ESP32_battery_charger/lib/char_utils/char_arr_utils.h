@@ -11,12 +11,14 @@
 class CharArrUtils
 {
 public:
-    static int concat_char_arr(char *dest,
+    static int concat_char_arr(char dest[],
                                 const char *src,
-                                int dest_len,
-                                int src_len);
+                                const char *src2,
+                                int dest_size);
 
+    static void clear_arr(char *arr, int arr_size);
 private:
-}
+    
+};
 
 #endif // CHAR_ARR_UTILS_H

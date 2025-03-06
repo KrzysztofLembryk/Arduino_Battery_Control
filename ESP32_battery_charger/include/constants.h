@@ -20,11 +20,5 @@ constexpr int INTERVAL_GET_DATA_FROM_SERVER = 2 * INTERVAL_10_S;
 constexpr int ARR_LEN = 96;
 constexpr int REC_DATA_BUFF_SIZE = 1024;
 
-// CHAR_UTILS CONSTANTS
-constexpr char NULL_TERMINATOR = '\0';
-constexpr int NULL_TERMINATOR_NOT_PRESENT = -1;
-
-// ERROR RETURN VALUES
-constexpr int ERROR_NO_NULL_TERMINATOR = -1;
 
 #endif // CONSTANTS_H
