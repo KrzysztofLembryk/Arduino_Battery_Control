@@ -10,6 +10,8 @@
 void wait_for_few_seconds();
 void init_WiFi();
 
+HttpHandler http_handler;
+
 void setup()
 {
   Serial.begin(SERIAL_BAUD_RATE);
@@ -33,7 +35,7 @@ void loop()
   if (current_millis - prev_millis >= INTERVAL_GET_DATA_FROM_SERVER)
   {
     prev_millis = current_millis;
-    int ret_val = HttpHandler::recv_charging_data(charging_times_arr,
+    int ret_val = http_handler.recv_charging_data(charging_times_arr,
                                     is_charging_arr,
                                     ARR_LEN,
                                     CHARGING_TIME,

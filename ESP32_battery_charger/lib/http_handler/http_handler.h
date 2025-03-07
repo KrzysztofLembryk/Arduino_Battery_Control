@@ -8,7 +8,8 @@ class HttpHandler
 {
 
 public:
-    static int recv_charging_data(int *charging_times_arr,
+    HttpHandler() : recv_data_size(0) {}
+    int recv_charging_data(int *charging_times_arr,
                                     bool *is_charging_arr,
                                     int arr_len,
                                     const char *charging_time_key, 
@@ -22,15 +23,14 @@ private:
     static constexpr const int RECV_BUFF_SIZE = 1024;
 
     // CLASS MEMBER VARIABLES
-    static WiFiClient client;
-    static HTTPClient http;
-    static char server_endpoint_name[SERVER_ENDPOINT_MAX_LEN];
-    static char recv_buff[RECV_BUFF_SIZE];
-    static int recv_data_size;
+    WiFiClient client;
+    HTTPClient http;
+    char server_endpoint_name[SERVER_ENDPOINT_MAX_LEN];
+    char recv_buff[RECV_BUFF_SIZE];
+    int recv_data_size;
 
-    static int handle_incoming_data();
-    static int recv_data(const char *server_name, const char *endpoint_name);
+    int handle_incoming_data();
+    int recv_data(const char *server_name, const char *endpoint_name);
 };
-
 
 #endif // HTTP_HANDLER_H
