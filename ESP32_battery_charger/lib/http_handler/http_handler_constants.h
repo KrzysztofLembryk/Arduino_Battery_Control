@@ -1,7 +1,0 @@
-#ifndef HTTP_HANDLER_CONSTANTS_H
-#define HTTP_HANDLER_CONSTANTS_H
-
-constexpr const int ENDPOINT_MAX_LEN = 100;
-constexpr const int RECV_BUFF_SIZE = 1024;
-
-#endif // HTTP_HANDLER_CONSTANTS_H

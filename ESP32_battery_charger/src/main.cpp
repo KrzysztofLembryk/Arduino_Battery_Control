@@ -5,11 +5,10 @@
 #include <ArduinoJson.h>
 #include "constants.h"
 #include "char_arr_utils.h"
+#include "http_handler.h"
 
 void wait_for_few_seconds();
 void init_WiFi();
-void recv_charging_data_from_server(int *charging_times_arr,
-                                    bool *is_charging_arr);
 
 void setup()
 {
@@ -17,7 +16,6 @@ void setup()
 
   // we give time to open the serial monitor - for DEVELOPMENT purposes
   wait_for_few_seconds();
-
   init_WiFi();
 }
 
@@ -26,7 +24,7 @@ void loop()
   static unsigned long current_millis = 0;
   static unsigned long prev_millis = 0;
 
-  // TODO Need to add real time clock or getting time from server
+  // TODO Need to add getting time from server
   static int charging_times_arr[ARR_LEN];
   static bool is_charging_arr[ARR_LEN];
 
@@ -35,93 +33,22 @@ void loop()
   if (current_millis - prev_millis >= INTERVAL_GET_DATA_FROM_SERVER)
   {
     prev_millis = current_millis;
-    recv_charging_data_from_server(charging_times_arr, is_charging_arr);
-
-    Serial.println(is_charging_arr[0]);
-    Serial.println(charging_times_arr[0]);
-  }
-}
-
-void recv_charging_data_from_server(int *charging_times_arr,
-                                    bool *is_charging_arr)
-{
-  static WiFiClient client;
-  static HTTPClient http;
-  static char server_endpoint_name[100];
-
-  CharArrUtils::concat_char_arr(server_endpoint_name,
-                                SERVER_ADDRESS,
-                                CHARGING_DATA_ENDPOINT,
-                                100);
-
-  if (http.begin(client, server_endpoint_name))
-  {
-    Serial.print("[HTTP] GET...\n");
-
-    // start connection and send HTTP header
-    int httpCode = http.GET();
-
-    // httpCode will be negative on error
-    if (httpCode > 0)
+    int ret_val = HttpHandler::recv_charging_data(charging_times_arr,
+                                    is_charging_arr,
+                                    ARR_LEN,
+                                    CHARGING_TIME,
+                                    IS_CHARGING,
+                                    SERVER_ADDRESS,
+                                    CHARGING_DATA_ENDPOINT);
+    if (ret_val == -1)
     {
-      Serial.printf("[HTTP] GET... code: %d\n", httpCode);
-      static char recv_buff[600] = {0};
-
-      if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)
-      {
-
-        CharArrUtils::clear_arr(recv_buff, 600);
-
-        int incoming_data_size = http.getSize();
-        WiFiClient *stream = http.getStreamPtr();
-
-        while (http.connected() &&
-               (incoming_data_size > 0 || incoming_data_size == -1))
-        {
-          size_t available_data_size = stream->available();
-
-          if (available_data_size)
-          {
-            int c = stream->readBytes(recv_buff, (
-                                    (available_data_size > sizeof(recv_buff)) ? 
-                                    sizeof(recv_buff) : available_data_size));
-
-            if (incoming_data_size > 0)
-            {
-              incoming_data_size -= c;
-            }
-          }
-        }
-
-        Serial.printf("recv data size: %d\n", strlen(recv_buff));
-        JsonDocument doc;
-        DeserializationError json_error = deserializeJson(doc, recv_buff);
-
-        if (json_error)
-        {
-          Serial.print(F("deserializeJson() failed: "));
-          Serial.println(json_error.f_str());
-        }
-        else
-        {
-          for (int i = 0; i < ARR_LEN; i++)
-          {
-            charging_times_arr[i] = doc[CHARGING_TIME][i].as<int>();
-            is_charging_arr[i] = doc[IS_CHARGING][i].as<bool>();
-          }
-        }
-      }
+      Serial.println("AAAEASEASEASEE xddddd");
     }
-    else
+    else 
     {
-      Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
+      Serial.println(is_charging_arr[0]);
+      Serial.println(charging_times_arr[0]);
     }
-
-    http.end();
-  }
-  else
-  {
-    Serial.println("[HTTP] Unable to connect");
   }
 }
 

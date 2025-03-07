@@ -1,91 +1,54 @@
+#include <ArduinoJson.h>
 #include "http_handler.h"
 #include "../char_utils/char_arr_utils.h"
 
-int HttpHandler::recv_data(const char *server_name, const char *endpoint_name)
+int HttpHandler::handle_incoming_data()
 {
-    CharArrUtils::concat_char_arr(HttpHandler::server_endpoint_name,
-                                  server_name,
-                                  endpoint_name,
-                                  HttpHandler::ENDPOINT_NAME_MAX_LEN);
+    CharArrUtils::clear_arr(recv_buff, RECV_BUFF_SIZE);
 
-    if (HttpHandler::http.begin(HttpHandler::client,
-                                HttpHandler::server_endpoint_name))
+    int incoming_data_size = http.getSize();
+    recv_data_size = incoming_data_size;
+
+    WiFiClient *stream = http.getStreamPtr();
+    int shift = 0;
+
+    while (http.connected() &&
+           (incoming_data_size > 0 || incoming_data_size == -1))
     {
-        Serial.print("[HTTP] GET...\n");
-        // start connection and send HTTP header
-        int httpCode = http.GET();
+        size_t available_size = stream->available();
 
-        // httpCode will be negative on error
-        if (httpCode > 0)
+        if (available_size)
         {
-            Serial.printf("[HTTP] GET... code: %d\n", httpCode);
+            int bytes_read = stream->readBytes(recv_buff + shift,
+            ((available_size > RECV_BUFF_SIZE - shift) ? 
+                RECV_BUFF_SIZE - shift : available_size));
 
-            if (httpCode == HTTP_CODE_OK || 
-                httpCode == HTTP_CODE_MOVED_PERMANENTLY)
+            if (incoming_data_size > 0)
             {
-                CharArrUtils::clear_arr(HttpHandler::recv_buff, 
-                                        HttpHandler::RECV_BUFF_SIZE);
-
-                int incoming_data_size = http.getSize();
-                WiFiClient *stream = http.getStreamPtr();
-
-                while (http.connected() &&
-                       (incoming_data_size > 0 || incoming_data_size == -1))
-                {
-                    size_t available_data_size = stream->available();
-
-                    if (available_data_size)
-                    {
-                        int c = stream->readBytes(recv_buff, (
-                                                                 (available_data_size > sizeof(recv_buff)) ? sizeof(recv_buff) : available_data_size));
-
-                        if (incoming_data_size > 0)
-                        {
-                            incoming_data_size -= c;
-                        }
-                    }
-                }
-
-                Serial.printf("recv data size: %d\n", strlen(recv_buff));
-                JsonDocument doc;
-                DeserializationError json_error = deserializeJson(doc, recv_buff);
-
-                if (json_error)
-                {
-                    Serial.print(F("deserializeJson() failed: "));
-                    Serial.println(json_error.f_str());
-                }
-                else
-                {
-                    for (int i = 0; i < ARR_LEN; i++)
-                    {
-                        charging_times_arr[i] = doc[CHARGING_TIME][i].as<int>();
-                        is_charging_arr[i] = doc[IS_CHARGING][i].as<bool>();
-                    }
-                }
+                shift += bytes_read;
+                incoming_data_size -= bytes_read;
             }
         }
-        else
-        {
-            Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
-        }
+    }
 
-        http.end();
-    }
-    else
-    {
-        Serial.println("[HTTP] Unable to connect");
-    }
+    // TODO - instead of recv_data_size we could probably use strlen(recv_buff)
+    // since we will get null terminated string
+    Serial.printf("recv data size: %d\n", recv_data_size);
+    return 0;
 }
 
-int HttpHandler::recv_charging_data(int *charging_times_arr,
-                                    bool *is_charging_arr)
+int HttpHandler::recv_data(const char *server_name, const char *endpoint_name)
 {
+    CharArrUtils::concat_char_arr(server_endpoint_name,
+                                  server_name,
+                                  endpoint_name,
+                                  SERVER_ENDPOINT_MAX_LEN);
+    
+    int ret_val = 0;
 
     if (http.begin(client, server_endpoint_name))
     {
         Serial.print("[HTTP] GET...\n");
-
         // start connection and send HTTP header
         int httpCode = http.GET();
 
@@ -93,61 +56,65 @@ int HttpHandler::recv_charging_data(int *charging_times_arr,
         if (httpCode > 0)
         {
             Serial.printf("[HTTP] GET... code: %d\n", httpCode);
-            static char recv_buff[600] = {0};
 
-            if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)
+            if (httpCode == HTTP_CODE_OK ||
+                httpCode == HTTP_CODE_MOVED_PERMANENTLY)
             {
-
-                CharArrUtils::clear_arr(recv_buff, 600);
-
-                int incoming_data_size = http.getSize();
-                WiFiClient *stream = http.getStreamPtr();
-
-                while (http.connected() &&
-                       (incoming_data_size > 0 || incoming_data_size == -1))
-                {
-                    size_t available_data_size = stream->available();
-
-                    if (available_data_size)
-                    {
-                        int c = stream->readBytes(recv_buff, (
-                                                                 (available_data_size > sizeof(recv_buff)) ? sizeof(recv_buff) : available_data_size));
-
-                        if (incoming_data_size > 0)
-                        {
-                            incoming_data_size -= c;
-                        }
-                    }
-                }
-
-                Serial.printf("recv data size: %d\n", strlen(recv_buff));
-                JsonDocument doc;
-                DeserializationError json_error = deserializeJson(doc, recv_buff);
-
-                if (json_error)
-                {
-                    Serial.print(F("deserializeJson() failed: "));
-                    Serial.println(json_error.f_str());
-                }
-                else
-                {
-                    for (int i = 0; i < ARR_LEN; i++)
-                    {
-                        charging_times_arr[i] = doc[CHARGING_TIME][i].as<int>();
-                        is_charging_arr[i] = doc[IS_CHARGING][i].as<bool>();
-                    }
-                }
+                handle_incoming_data();
+            }
+            else 
+            {
+                Serial.printf("[HTTP] GET... couldn't recieve data\n");
+                ret_val = -1;
             }
         }
         else
         {
             Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
+            ret_val = -1;
         }
 
         http.end();
+        return ret_val;
     }
     else
     {
         Serial.println("[HTTP] Unable to connect");
+        return -1;
     }
+}
+
+int HttpHandler::recv_charging_data(int *charging_times_arr,
+                                    bool *is_charging_arr,
+                                    int arr_len,
+                                    const char *charging_time_key, 
+                                    const char *is_charging_key,
+                                    const char *server_name, 
+                                    const char *endpoint_name)
+{
+    int ret_val = recv_data(server_name, endpoint_name);
+
+    if (ret_val == -1)
+    {
+        return -1;
+    }
+
+    JsonDocument doc;
+    DeserializationError json_error = deserializeJson(doc, recv_buff);
+
+    if (json_error)
+    {
+        Serial.print(F("deserializeJson() failed: "));
+        Serial.println(json_error.f_str());
+        return -1;
+    }
+    else
+    {
+        for (int i = 0; i < arr_len; i++)
+        {
+            charging_times_arr[i] = doc[charging_time_key][i].as<int>();
+            is_charging_arr[i] = doc[is_charging_key][i].as<bool>();
+        }
+    }
+    return 0;
 }
