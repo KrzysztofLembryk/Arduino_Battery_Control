@@ -23,6 +23,10 @@ public:
                         const char *server_name, 
                         const char *endpoint_name);
 
+    int get_curr_interval(TimeHandler &time_handler,
+                        const char *server_name, 
+                        const char *endpoint_name);
+
 private:
     // CLASS CONSTANTS
     static constexpr const int SERVER_ENDPOINT_MAX_LEN = 100;
@@ -35,6 +39,7 @@ private:
     char recv_buff[RECV_BUFF_SIZE];
     int recv_data_size;
 
+    // PRIVATE METHODS
     int get_data(const char *server_name, const char *endpoint_name);
     int handle_incoming_data_stream();
     int handle_json_deserialization(JsonDocument &doc);

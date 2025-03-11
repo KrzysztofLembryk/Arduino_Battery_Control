@@ -38,3 +38,13 @@ void TimeHandler::print_time()
     Serial.println("[TimeHandler] print time:");
     Serial.println(String(hour_arr) + ":" + String(minute_arr));
 }
+
+int TimeHandler::get_curr_interval() const
+{
+    return curr_charging_interval_idx;
+}
+
+int TimeHandler::get_time_till_next_interval() const
+{
+    return time_till_next_interval;
+}

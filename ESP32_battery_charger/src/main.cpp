@@ -13,15 +13,14 @@ void wait_for_few_seconds();
 void init_WiFi();
 int recv_charging_data(int charging_times_arr[],
                        bool is_charging_arr[],
-                       unsigned long current_millis,
-                       unsigned long *prev_millis);
-int recv_curr_time(unsigned long current_millis,
-                   unsigned long *prev_millis);
+                        HttpHandler &http_handler);
+int recv_curr_time(HttpHandler &http_handler, TimeHandler &time_handler);
+int recv_curr_interval(HttpHandler &http_handler, TimeHandler &time_handler);
 int handle_error_ret_code(int ret_code);
 
 // ----------GLOBAL VARIABLES----------
-HttpHandler http_handler;
-TimeHandler time_handler;
+// HttpHandler http_handler;
+// TimeHandler time_handler;
 
 void setup()
 {
@@ -34,19 +33,22 @@ void setup()
 
 void loop()
 {
+  // ----------HANDLER CLASSES OBJECTS-----------
+  static HttpHandler http_handler;
+  static TimeHandler time_handler;
+
   // ----------ARRAYS----------
   static int charging_times_arr[ARR_LEN];
   static bool is_charging_arr[ARR_LEN];
 
   // ----------MEASURING TIME VARIABLES----------
   static unsigned long current_millis = 0;
-  static unsigned long prev_charging_millis = 0;
-  static unsigned long prev_time_millis = 0;
-  static unsigned long prev_interval_millis = 0;
+  static unsigned long prev_millis = 0;
   static unsigned long time_to_next_interval = 0;
 
   // ----------CONTROL VARIABLES----------
   static int curr_interval_idx = 0;
+  static int time_till_next_interval = 0;
   static bool is_charging = false;
   static bool first_time = true;
 
@@ -55,23 +57,22 @@ void loop()
   // variables, I don't want to make global variables if not really necessary
   if (first_time)
   {
-    first_time = false;
+    recv_curr_interval(http_handler, time_handler);
 
-    recv_curr_time(current_millis, &prev_time_millis);
+    curr_interval_idx = time_handler.get_curr_interval();
+    time_till_next_interval = time_handler.get_time_till_next_interval();
 
     recv_charging_data(charging_times_arr,
                       is_charging_arr,
-                      current_millis,
-                      &prev_charging_millis);
-
+                      http_handler);
   }
 
   // ----------MAIN PROGRAM LOOP----------
   current_millis = millis();
 
-  if (current_millis - prev_interval_millis >= time_to_next_interval)
+  if (current_millis - prev_millis >= time_to_next_interval)
   {
-    prev_interval_millis = current_millis;
+    prev_millis = current_millis;
     if (is_charging)
     {
       time_to_next_interval = INTERVAL_15_MIN - time_to_next_interval;
@@ -80,30 +81,41 @@ void loop()
     }
     else 
     {
-      curr_interval_idx = (curr_interval_idx + 1) % NBR_OF_INTERVALS;
-
-      if (is_charging_arr[curr_interval_idx])
+      if (!first_time)
       {
-        is_charging = true;
-        Serial.println("*************SWITCHING CHARGING ON*************");
-        time_to_next_interval = 
-                        charging_times_arr[curr_interval_idx] * INTERVAL_10_S;
+        curr_interval_idx = (curr_interval_idx + 1) % NBR_OF_INTERVALS;
+
+        if (curr_interval_idx == DATA_FOR_TODAY_IDX || 
+            curr_interval_idx == DATA_UPDATE_IDX)
+        {
+
+          recv_charging_data(charging_times_arr,
+                              is_charging_arr,
+                              http_handler);
+        }
+
+        if (is_charging_arr[curr_interval_idx])
+        {
+          is_charging = true;
+          Serial.println("*************SWITCHING CHARGING ON*************");
+          time_to_next_interval = 
+                          charging_times_arr[curr_interval_idx] * INTERVAL_10_S;
+        }
+        else
+        {
+          time_to_next_interval = INTERVAL_15_MIN;
+        }
       }
       else
       {
-        time_to_next_interval = INTERVAL_15_MIN;
+
       }
     }
   }
 }
 
-int recv_curr_time(unsigned long current_millis,
-                   unsigned long *prev_millis)
+int recv_curr_time(HttpHandler &http_handler, TimeHandler &time_handler)
 {
-  if (current_millis - *prev_millis >= INTERVAL_GET_TIME_FROM_SERVER)
-  {
-    *prev_millis = current_millis;
-
     int ret_code = http_handler.get_curr_time(time_handler,
                                               SERVER_ADDRESS,
                                               CURR_TIME_ENDPOINT);
@@ -115,44 +127,50 @@ int recv_curr_time(unsigned long current_millis,
     }
     else
       return handle_error_ret_code(ret_code);
+}
+
+int recv_curr_interval(HttpHandler &http_handler, TimeHandler &time_handler)
+{
+  int ret_code = http_handler.get_curr_interval(time_handler,
+                                                SERVER_ADDRESS,
+                                                CURR_INTERVAL_ENDPOINT);
+
+  if (ret_code == SUCCESS)
+  {
+    Serial.println("Curr interval success");
+    return SUCCESS;
   }
-  return SUCCESS;
+  else
+    return handle_error_ret_code(ret_code);
 }
 
 int recv_charging_data(int charging_times_arr[],
                        bool is_charging_arr[],
-                       unsigned long current_millis,
-                       unsigned long *prev_millis)
+                        HttpHandler &http_handler)
 {
-  if (current_millis - *prev_millis >= INTERVAL_GET_DATA_FROM_SERVER)
+  int ret_code = http_handler.get_charging_data(charging_times_arr,
+                                                is_charging_arr,
+                                                ARR_LEN,
+                                                CHARGING_TIME,
+                                                IS_CHARGING,
+                                                SERVER_ADDRESS,
+                                                CHARGING_DATA_ENDPOINT);
+  if (ret_code == SUCCESS)
   {
-    *prev_millis = current_millis;
+    Serial.println("###SUCCESS - data received###\nPrinting data:");
+    Serial.printf("nbr\tis_charging\tcharging_time [min]\n");
 
-    int ret_code = http_handler.get_charging_data(charging_times_arr,
-                                                  is_charging_arr,
-                                                  ARR_LEN,
-                                                  CHARGING_TIME,
-                                                  IS_CHARGING,
-                                                  SERVER_ADDRESS,
-                                                  CHARGING_DATA_ENDPOINT);
-    if (ret_code == SUCCESS)
+    for (int i = 0; i < 3; i++)
     {
-      Serial.println("###SUCCESS - data received###\nPrinting data:");
-      Serial.printf("nbr\tis_charging\tcharging_time [min]\n");
-
-      for (int i = 0; i < 3; i++)
-      {
-        Serial.printf("%d\t%d\t\t%d\n", i,
-                      is_charging_arr[i],
-                      charging_times_arr[i]);
-      }
-      Serial.flush();
-      return SUCCESS;
+      Serial.printf("%d\t%d\t\t%d\n", i,
+                    is_charging_arr[i],
+                    charging_times_arr[i]);
     }
-    else
-      return handle_error_ret_code(ret_code);
+    Serial.flush();
+    return SUCCESS;
   }
-  return SUCCESS;
+  else
+    return handle_error_ret_code(ret_code);
 }
 
 int handle_error_ret_code(int ret_code)

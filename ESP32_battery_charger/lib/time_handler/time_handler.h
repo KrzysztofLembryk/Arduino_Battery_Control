@@ -11,6 +11,9 @@ public:
 
     int extract_curr_interval_from_json(JsonDocument &json_doc);
 
+    int get_curr_interval() const;
+    int get_time_till_next_interval() const;
+
 private:
     // CLASS CONSTANTS
     // value is 3 since we need to append '\0' at the end of array

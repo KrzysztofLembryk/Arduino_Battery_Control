@@ -21,6 +21,22 @@ int HttpHandler::get_curr_time(TimeHandler &time_handler,
     return SUCCESS;
 }
 
+int HttpHandler::get_curr_interval(TimeHandler &time_handler,
+                                    const char *server_name, 
+                                    const char *endpoint_name)
+{
+    JsonDocument json_doc;
+    int ret_code = get_data_to_json(json_doc, server_name, endpoint_name);
+
+    if (ret_code != SUCCESS)
+        return ret_code;
+    
+    time_handler.extract_curr_interval_from_json(json_doc);
+
+    return SUCCESS;
+
+}
+
 int HttpHandler::get_charging_data(int charging_times_arr[],
                                     bool is_charging_arr[],
                                     int arr_len,
