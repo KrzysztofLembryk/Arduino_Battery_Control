@@ -4,6 +4,7 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include "constants.h"
+#include "error_constants.h"
 #include "char_arr_utils.h"
 #include "http_handler.h"
 
@@ -42,14 +43,37 @@ void loop()
                                     IS_CHARGING,
                                     SERVER_ADDRESS,
                                     CHARGING_DATA_ENDPOINT);
-    if (ret_val == -1)
+    switch (ret_val)
     {
-      Serial.println("AAAEASEASEASEE xddddd");
-    }
-    else 
-    {
-      Serial.println(is_charging_arr[0]);
-      Serial.println(charging_times_arr[0]);
+      case SUCCESS:
+        Serial.println("###SUCCESS - data received###\nPrinting data:");
+        Serial.printf("is_charging\tcharging_time [min]\n");
+
+        for (int i = 0; i < ARR_LEN; i++) 
+        {
+          Serial.printf("%d:%d\t%d\n", i, 
+                                      is_charging_arr[i], 
+                                      charging_times_arr[i]);
+        }
+        Serial.flush();
+        break;
+      // ######### TODO #########
+      // Errors need some handlers, e.g. like while we dont get success we send 
+      // like 10 consecutive gets to server in 10s intervals, and if we still 
+      // dont get success, we send info about it to server and maybe wait for 
+      // its response etc.
+      case ERROR:
+        Serial.println("[main] Normal error");
+        break;
+      case ERROR_MORE_DATA_THAN_BUFF_SIZE:
+        Serial.println("[main] More data error");
+        break;
+      case ERROR_DEST_SIZE_TO_SMALL:
+        Serial.println("[main] Dest size to small");
+        break;
+      case ERROR_DESERIALIZE_JSON:
+        Serial.println("[main] Deserialize json");
+        break;
     }
   }
 }
