@@ -1,18 +1,23 @@
 #include "http_handler.h"
 #include "../char_utils/char_arr_utils.h"
-#include "../include/error_constants.h"
+#include "../../include/error_constants.h"
 
 // --------------PUBLIC METHODS IMPL--------------
 
 int HttpHandler::get_curr_time(const char *server_name, 
                                 const char *endpoint_name)
 {
-    StaticJsonDocument<1024> json_doc;
+    JsonDocument json_doc;
     int ret_code = get_data_to_json(json_doc, server_name, endpoint_name);
+
 
     if (ret_code != SUCCESS)
         return ret_code;
+    
+    Serial.println("currTime from server: " + 
+            json_doc["currTime"].as<String>());
 
+    return SUCCESS;
 }
 
 int HttpHandler::get_charging_data(int charging_times_arr[],
@@ -23,7 +28,7 @@ int HttpHandler::get_charging_data(int charging_times_arr[],
                                     const char *server_name, 
                                     const char *endpoint_name)
 {
-    StaticJsonDocument<1024> json_doc;
+    JsonDocument json_doc;
     int ret_code = get_data_to_json(json_doc, server_name, endpoint_name);
 
     if (ret_code != SUCCESS)
@@ -111,6 +116,7 @@ int HttpHandler::handle_incoming_data_stream()
 {
     CharArrUtils::clear_arr(recv_buff, RECV_BUFF_SIZE);
 
+    recv_data_size = 0;
     int incoming_data_size = http.getSize();
 
     if (incoming_data_size > RECV_BUFF_SIZE)
@@ -150,6 +156,7 @@ int HttpHandler::handle_incoming_data_stream()
             // recv_buff, thus if (shift > RECV_BUFF_SIZE) would never be true
             // if we added bytes_read to shift
             shift += available_size;
+            recv_data_size = shift;
         }
     }
 

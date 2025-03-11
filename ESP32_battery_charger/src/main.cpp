@@ -14,8 +14,9 @@ int recv_charging_data(int charging_times_arr[],
                         bool is_charging_arr[], 
                         unsigned long current_millis, 
                         unsigned long *prev_millis);
-int recv_curr_time();
-int handle_error_ret_code();
+int recv_curr_time(unsigned long current_millis, 
+                   unsigned long *prev_millis);
+int handle_error_ret_code(int ret_code);
 
 HttpHandler http_handler;
 
@@ -45,16 +46,28 @@ void loop()
                     current_millis, 
                     &prev_charging_millis);
 
+  recv_curr_time(current_millis, &prev_time_millis);
+
 }
 
-int recv_curr_time(
-                  unsigned long current_millis, 
+int recv_curr_time(unsigned long current_millis, 
                   unsigned long *prev_millis)
 {
   if (current_millis - *prev_millis >= INTERVAL_GET_TIME_FROM_SERVER)
   {
     *prev_millis = current_millis; 
+    int ret_code = http_handler.get_curr_time(SERVER_ADDRESS, 
+                                              CURR_TIME_ENDPOINT);
+    
+    if (ret_code == SUCCESS)
+    {
+      Serial.println("Curr time success");
+      return SUCCESS;
+    }
+    else
+      return handle_error_ret_code(ret_code);
   }
+  return SUCCESS;
 }
 
 int recv_charging_data(int charging_times_arr[],
@@ -89,6 +102,7 @@ int recv_charging_data(int charging_times_arr[],
     else
       return handle_error_ret_code(ret_code);
   }
+  return SUCCESS;
 }
 
 int handle_error_ret_code(int ret_code)
