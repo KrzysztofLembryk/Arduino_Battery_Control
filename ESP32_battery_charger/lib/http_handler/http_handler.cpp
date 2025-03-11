@@ -4,7 +4,8 @@
 
 // --------------PUBLIC METHODS IMPL--------------
 
-int HttpHandler::get_curr_time(const char *server_name, 
+int HttpHandler::get_curr_time(TimeHandler &time_handler,
+                                const char *server_name, 
                                 const char *endpoint_name)
 {
     JsonDocument json_doc;
@@ -14,8 +15,8 @@ int HttpHandler::get_curr_time(const char *server_name,
     if (ret_code != SUCCESS)
         return ret_code;
     
-    Serial.println("currTime from server: " + 
-            json_doc["currTime"].as<String>());
+    time_handler.extract_HM_time_from_json(json_doc);
+    time_handler.print_time();
 
     return SUCCESS;
 }

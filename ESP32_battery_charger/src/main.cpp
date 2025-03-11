@@ -19,6 +19,7 @@ int recv_curr_time(unsigned long current_millis,
 int handle_error_ret_code(int ret_code);
 
 HttpHandler http_handler;
+TimeHandler time_handler;
 
 void setup()
 {
@@ -56,7 +57,8 @@ int recv_curr_time(unsigned long current_millis,
   if (current_millis - *prev_millis >= INTERVAL_GET_TIME_FROM_SERVER)
   {
     *prev_millis = current_millis; 
-    int ret_code = http_handler.get_curr_time(SERVER_ADDRESS, 
+    int ret_code = http_handler.get_curr_time(time_handler,
+                                              SERVER_ADDRESS, 
                                               CURR_TIME_ENDPOINT);
     
     if (ret_code == SUCCESS)
@@ -90,11 +92,11 @@ int recv_charging_data(int charging_times_arr[],
       Serial.println("###SUCCESS - data received###\nPrinting data:");
       Serial.printf("nbr\tis_charging\tcharging_time [min]\n");
 
-      for (int i = 0; i < ARR_LEN; i++) 
+      for (int i = 0; i < 3; i++) 
       {
-        Serial.printf("%d\t%d\t%d\n", i, 
-                                    is_charging_arr[i], 
-                                    charging_times_arr[i]);
+        Serial.printf("%d\t%d\t\t%d\n", i, 
+                                  is_charging_arr[i], 
+                                  charging_times_arr[i]);
       }
       Serial.flush();
       return SUCCESS;

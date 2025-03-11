@@ -14,7 +14,7 @@ https://hackingmajenkoblog.wordpress.com/2016/02/04/the-evils-of-arduino-strings
 https://arduinojson.org/v6/how-to/reuse-a-json-document/
 - JsonDocument::clear() is implicitly called when doing deserializeJson
 - we shouldn't reuse JsonDocument
-- it's better to use StaticJson<size>
+- StaticJson/DynamicJson is deprecated!!
 
 ## Plan
 - Wysłanie z serwera 96 wierszy ładować/nieładować + ile ładować - GIT

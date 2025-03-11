@@ -4,12 +4,13 @@
 #include <ArduinoJson.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include "../time_handler/time_handler.h"
 
 class HttpHandler
 {
-
 public:
     HttpHandler() : recv_data_size(0) {}
+
     int get_charging_data(int charging_times_arr[],
                             bool is_charging_arr[],
                             int arr_len,
@@ -18,11 +19,12 @@ public:
                             const char *server_name, 
                             const char *endpoint_name);
 
-    int get_curr_time(const char *server_name, 
+    int get_curr_time(TimeHandler &time_handler,
+                        const char *server_name, 
                         const char *endpoint_name);
 
 private:
-    // CONSTANTS
+    // CLASS CONSTANTS
     static constexpr const int SERVER_ENDPOINT_MAX_LEN = 100;
     static constexpr const int RECV_BUFF_SIZE = 1024;
 
