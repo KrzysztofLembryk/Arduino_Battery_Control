@@ -10,6 +10,12 @@
 
 void wait_for_few_seconds();
 void init_WiFi();
+int recv_charging_data(int charging_times_arr[],
+                        bool is_charging_arr[], 
+                        unsigned long current_millis, 
+                        unsigned long *prev_millis);
+int recv_curr_time();
+int handle_error_ret_code();
 
 HttpHandler http_handler;
 
@@ -25,7 +31,8 @@ void setup()
 void loop()
 {
   static unsigned long current_millis = 0;
-  static unsigned long prev_millis = 0;
+  static unsigned long prev_charging_millis = 0;
+  static unsigned long prev_time_millis = 0;
 
   // TODO Need to add getting time from server
   static int charging_times_arr[ARR_LEN];
@@ -33,49 +40,82 @@ void loop()
 
   current_millis = millis();
 
-  if (current_millis - prev_millis >= INTERVAL_GET_DATA_FROM_SERVER)
+  recv_charging_data(charging_times_arr, 
+                    is_charging_arr, 
+                    current_millis, 
+                    &prev_charging_millis);
+
+}
+
+int recv_curr_time(
+                  unsigned long current_millis, 
+                  unsigned long *prev_millis)
+{
+  if (current_millis - *prev_millis >= INTERVAL_GET_TIME_FROM_SERVER)
   {
-    prev_millis = current_millis;
-    int ret_val = http_handler.recv_charging_data(charging_times_arr,
+    *prev_millis = current_millis; 
+  }
+}
+
+int recv_charging_data(int charging_times_arr[],
+                        bool is_charging_arr[], 
+                        unsigned long current_millis, 
+                        unsigned long *prev_millis)
+{
+  if (current_millis - *prev_millis >= INTERVAL_GET_DATA_FROM_SERVER)
+  {
+    *prev_millis = current_millis;
+    int ret_code = http_handler.get_charging_data(charging_times_arr,
                                     is_charging_arr,
                                     ARR_LEN,
                                     CHARGING_TIME,
                                     IS_CHARGING,
                                     SERVER_ADDRESS,
                                     CHARGING_DATA_ENDPOINT);
-    switch (ret_val)
+    if (ret_code == SUCCESS)
     {
-      case SUCCESS:
-        Serial.println("###SUCCESS - data received###\nPrinting data:");
-        Serial.printf("is_charging\tcharging_time [min]\n");
+      Serial.println("###SUCCESS - data received###\nPrinting data:");
+      Serial.printf("nbr\tis_charging\tcharging_time [min]\n");
 
-        for (int i = 0; i < ARR_LEN; i++) 
-        {
-          Serial.printf("%d:%d\t%d\n", i, 
-                                      is_charging_arr[i], 
-                                      charging_times_arr[i]);
-        }
-        Serial.flush();
-        break;
-      // ######### TODO #########
-      // Errors need some handlers, e.g. like while we dont get success we send 
-      // like 10 consecutive gets to server in 10s intervals, and if we still 
-      // dont get success, we send info about it to server and maybe wait for 
-      // its response etc.
-      case ERROR:
-        Serial.println("[main] Normal error");
-        break;
-      case ERROR_MORE_DATA_THAN_BUFF_SIZE:
-        Serial.println("[main] More data error");
-        break;
-      case ERROR_DEST_SIZE_TO_SMALL:
-        Serial.println("[main] Dest size to small");
-        break;
-      case ERROR_DESERIALIZE_JSON:
-        Serial.println("[main] Deserialize json");
-        break;
+      for (int i = 0; i < ARR_LEN; i++) 
+      {
+        Serial.printf("%d\t%d\t%d\n", i, 
+                                    is_charging_arr[i], 
+                                    charging_times_arr[i]);
+      }
+      Serial.flush();
+      return SUCCESS;
     }
+    else
+      return handle_error_ret_code(ret_code);
   }
+}
+
+int handle_error_ret_code(int ret_code)
+{
+  // TODO
+  // We probably need to set some flags here so that in main we can handle them
+  switch (ret_code)
+  {
+    // ######### TODO #########
+    // Errors need some handlers, e.g. like while we dont get success we send 
+    // like 10 consecutive gets to server in 10s intervals, and if we still 
+    // dont get success, we send info about it to server and maybe wait for 
+    // its response etc.
+    case ERROR:
+      Serial.println("[main] Normal error");
+      break;
+    case ERROR_MORE_DATA_THAN_BUFF_SIZE:
+      Serial.println("[main] More data error");
+      break;
+    case ERROR_DEST_SIZE_TO_SMALL:
+      Serial.println("[main] Dest size to small");
+      break;
+    case ERROR_DESERIALIZE_JSON:
+      Serial.println("[main] Deserialize json");
+      break;
+  }
+  return ERROR;
 }
 
 void init_WiFi()

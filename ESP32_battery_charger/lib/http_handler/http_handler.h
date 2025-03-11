@@ -1,6 +1,7 @@
 #ifndef HTTP_HANDLER_H
 #define HTTP_HANDLER_H
 
+#include <ArduinoJson.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
 
@@ -9,13 +10,16 @@ class HttpHandler
 
 public:
     HttpHandler() : recv_data_size(0) {}
-    int recv_charging_data(int charging_times_arr[],
+    int get_charging_data(int charging_times_arr[],
                             bool is_charging_arr[],
                             int arr_len,
                             const char *charging_time_key, 
                             const char *is_charging_key,
                             const char *server_name, 
                             const char *endpoint_name);
+
+    int get_curr_time(const char *server_name, 
+                        const char *endpoint_name);
 
 private:
     // CONSTANTS
@@ -29,8 +33,12 @@ private:
     char recv_buff[RECV_BUFF_SIZE];
     int recv_data_size;
 
-    int recv_data(const char *server_name, const char *endpoint_name);
-    int incoming_data_stream_handler();
+    int get_data(const char *server_name, const char *endpoint_name);
+    int handle_incoming_data_stream();
+    int handle_json_deserialization(JsonDocument &doc);
+    int get_data_to_json(JsonDocument &doc,
+                        const char *server_name, 
+                        const char *endpoint_name);
 };
 
 #endif // HTTP_HANDLER_H

@@ -16,6 +16,7 @@ constexpr const char *IS_CHARGING = "isCharging";
 constexpr int INTERVAL_60_S = 60000;
 constexpr int INTERVAL_10_S = 10000;
 constexpr int INTERVAL_GET_DATA_FROM_SERVER = 2 * INTERVAL_10_S;
+constexpr int INTERVAL_GET_TIME_FROM_SERVER = 2 * INTERVAL_10_S;
 
 constexpr int ARR_LEN = 96;
 constexpr int REC_DATA_BUFF_SIZE = 1024;
