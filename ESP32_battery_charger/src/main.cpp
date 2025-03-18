@@ -13,6 +13,30 @@
 void wait_for_few_seconds();
 void init_WiFi();
 
+int handle_battery_turn_on_off(int *time_to_next_event,
+                               int *time_left_to_next_interval,
+                               int *time_to_charge,
+                               int charging_times_arr[],
+                               bool is_charging_arr[],
+                               HttpHandler &http_handler,
+                               TimeHandler &time_handler);
+
+int sync_with_server(int *curr_interval_idx,
+                     int *time_left_to_next_interval,
+                     int *time_to_charge,
+                     int charging_times_arr[],
+                     bool is_charging_arr[],
+                     HttpHandler &http_handler,
+                     TimeHandler &time_handler);
+
+int do_battery_turn_on_off(int *curr_interval_idx,
+                           int *time_to_next_event,
+                           int *time_left_to_next_interval,
+                           int *time_to_charge,
+                           int charging_times_arr[],
+                           bool is_charging_arr[],
+                           HttpHandler &http_handler,
+                           TimeHandler &time_handler);
 // ----------GLOBAL VARIABLES----------
 // HttpHandler http_handler;
 // TimeHandler time_handler;
@@ -43,29 +67,10 @@ void loop()
   static unsigned long time_to_charge = 0;
   static unsigned long time_left_to_next_interval = 0;
 
-  static constexpr int STATE_CHARGING = 1;
-  static constexpr int STATE_WAITING = 2;
-  static constexpr int STATE_CHARGING = 3;
-  static int curr_state;
-
+  int curr_interval_idx = -1;
   // ----------CONTROL VARIABLES----------
-  static int curr_interval_idx = -1;
-  static bool is_charging = false;
 
   // ----------FUNCTIONS CALLED ONCE DURING FIRST LOOP----------
-  // These could be in setup, but I would need to make two *_arr global 
-  // variables, I don't want to make global variables if not really necessary
-  // if (first_time)
-  // {
-  //   recv_curr_interval(http_handler, time_handler);
-
-  //   curr_interval_idx = time_handler.get_curr_interval();
-  //   time_till_next_interval = time_handler.get_time_till_next_interval();
-
-  //   recv_charging_data(charging_times_arr,
-  //                     is_charging_arr,
-  //                     http_handler);
-  // }
 
   // ----------MAIN PROGRAM LOOP----------
   current_millis = millis();
@@ -77,15 +82,14 @@ void loop()
     if (curr_interval_idx == -1)
     {
       recv_charging_data(charging_times_arr,
-                        is_charging_arr,
-                        http_handler);
+                         is_charging_arr,
+                         http_handler);
       recv_curr_interval(http_handler, time_handler);
 
       curr_interval_idx = time_handler.get_curr_interval();
       time_left_to_next_interval = time_handler.get_time_till_next_interval();
       time_to_charge = charging_times_arr[curr_interval_idx];
 
-      // TO DO FUNKCJI
       if (time_left_to_next_interval < time_to_charge)
       {
         time_to_next_event = time_left_to_next_interval * INTERVAL_10_S;
@@ -93,7 +97,7 @@ void loop()
         time_to_charge = 0;
         Serial.println("###############CHARGING START###############");
       }
-      else 
+      else
       {
         if (time_to_charge == 0)
         {
@@ -110,7 +114,7 @@ void loop()
         }
       }
     }
-    else 
+    else
     {
       if (time_left_to_next_interval == 0)
       {
@@ -118,14 +122,133 @@ void loop()
         time_left_to_next_interval = INTERVAL_15_MIN;
         time_to_charge = charging_times_arr[curr_interval_idx];
       }
-      else 
+      else
       {
-        
       }
     }
   }
 }
 
+int handle_battery_turn_on_off(int *time_to_next_event,
+                               int *time_left_to_next_interval,
+                               int *time_to_charge,
+                               int charging_times_arr[],
+                               bool is_charging_arr[],
+                               HttpHandler &http_handler,
+                               TimeHandler &time_handler)
+{
+  static bool first_loop = true;
+  static int curr_interval_idx = -1;
+
+  if (!first_loop)
+  {
+
+    do_battery_turn_on_off(&curr_interval_idx,
+                           time_to_next_event, time_left_to_next_interval,
+                           time_to_charge, charging_times_arr, is_charging_arr, http_handler,
+                           time_handler);
+  }
+  else
+  {
+    /**
+     * During first loop we need to fetch data from the server to synchronise
+     * our time with real time
+     */
+    first_loop = false;
+    sync_with_server(&curr_interval_idx,
+                     time_left_to_next_interval,
+                     time_to_charge,
+                     charging_times_arr,
+                     is_charging_arr,
+                     http_handler,
+                     time_handler);
+
+    do_battery_turn_on_off(&curr_interval_idx,
+                           time_to_next_event, time_left_to_next_interval,
+                           time_to_charge, charging_times_arr, is_charging_arr, http_handler,
+                           time_handler);
+
+
+  }
+}
+
+int do_battery_turn_on_off(int *curr_interval_idx,
+                           int *time_to_next_event,
+                           int *time_left_to_next_interval,
+                           int *time_to_charge,
+                           int charging_times_arr[],
+                           bool is_charging_arr[],
+                           HttpHandler &http_handler,
+                           TimeHandler &time_handler)
+{
+  if (*time_left_to_next_interval == 0)
+  {
+    *curr_interval_idx = (*curr_interval_idx + 1) % ARR_LEN;
+    if (*curr_interval_idx == SYNC_SERVER_0000_IDX ||
+        *curr_interval_idx == SYNC_SERVER_0600_IDX ||
+        *curr_interval_idx == SYNC_SERVER_1200_IDX ||
+        *curr_interval_idx == SYNC_SERVER_1700_IDX ||
+        *curr_interval_idx == SYNC_SERVER_2200_IDX)
+    {
+      sync_with_server(curr_interval_idx,
+                       time_left_to_next_interval,
+                       time_to_charge,
+                       charging_times_arr,
+                       is_charging_arr,
+                       http_handler,
+                       time_handler);
+    }
+    else
+    {
+      // !!! INTERVAL_15_MIN - is in miliseconds, whereas time_to_charge is in
+      // minutes -- NEED TO CHANGE IT for whole alg to work
+      *time_left_to_next_interval = INTERVAL_15_MIN;
+      *time_to_charge = charging_times_arr[*curr_interval_idx];
+    }
+  }
+
+  if (*time_left_to_next_interval < *time_to_charge)
+  {
+    *time_to_next_event = *time_left_to_next_interval * INTERVAL_10_S;
+    *time_left_to_next_interval = 0;
+    *time_to_charge = 0;
+    Serial.println("###############CHARGING START###############");
+  }
+  else
+  {
+    if (*time_to_charge == 0)
+    {
+      Serial.println("###############CHARGING STOP###############");
+      *time_to_next_event = *time_left_to_next_interval * INTERVAL_10_S;
+      *time_left_to_next_interval = 0;
+    }
+    else
+    {
+      Serial.println("###############CHARGING START###############");
+      *time_left_to_next_interval -= *time_to_charge;
+      *time_to_next_event = *time_to_charge * INTERVAL_10_S;
+      *time_to_charge = 0;
+    }
+  }
+}
+
+int sync_with_server(int *curr_interval_idx,
+                     int *time_left_to_next_interval,
+                     int *time_to_charge,
+                     int charging_times_arr[],
+                     bool is_charging_arr[],
+                     HttpHandler &http_handler,
+                     TimeHandler &time_handler)
+{
+  recv_charging_data(charging_times_arr,
+                     is_charging_arr,
+                     http_handler);
+  recv_curr_interval(http_handler, time_handler);
+
+  *curr_interval_idx = time_handler.get_curr_interval();
+  *time_left_to_next_interval = time_handler.get_time_till_next_interval();
+  *time_to_charge = charging_times_arr[*curr_interval_idx];
+}
 
 void init_WiFi()
 {

@@ -24,10 +24,16 @@ constexpr int INTERVAL_GET_DATA_FROM_SERVER = 1 * INTERVAL_10_S;
 constexpr int INTERVAL_GET_TIME_FROM_SERVER = 1 * INTERVAL_10_S;
 constexpr int INTERVAL_15_MIN = 15 * INTERVAL_10_S;
 
-// idx = 0, means time 00:00, we count in 15min intervals, thus (67 + 1) * 15
-// 67 since we count from 0, not from 1
-constexpr int DATA_FOR_TODAY_IDX = 0;
-constexpr int DATA_UPDATE_IDX = 67;
+/**
+ * In 24 hours we have 96 15min intervals, 00:00 has idx = 0, 23:45 idx = 95.
+ * We define five times when we sync with our server so that our timer does not
+ * deviate much from real time
+ */
+constexpr int SYNC_SERVER_0000_IDX = 0;
+constexpr int SYNC_SERVER_0600_IDX = 24;
+constexpr int SYNC_SERVER_1200_IDX = 48;
+constexpr int SYNC_SERVER_1700_IDX = 68;
+constexpr int SYNC_SERVER_2200_IDX = 88;
 
 // ----------DATA SIZE CONSTANTS----------
 constexpr int ARR_LEN = 96;

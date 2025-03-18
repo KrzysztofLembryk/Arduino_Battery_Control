@@ -80,7 +80,7 @@ int handle_error_ret_code(int ret_code)
     Serial.println("[main] Normal error");
     break;
   case ERROR_MORE_DATA_THAN_BUFF_SIZE:
-    Serial.println("[main] More data error");
+    Serial.println("[main] More data than buff size error");
     break;
   case ERROR_DEST_SIZE_TO_SMALL:
     Serial.println("[main] Dest size to small");
