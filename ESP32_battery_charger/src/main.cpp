@@ -21,7 +21,6 @@ int sync_with_server(int *curr_interval_idx,
                      int *time_left_to_next_interval,
                      int *time_to_charge,
                      int charging_times_arr[],
-                     bool is_charging_arr[],
                      HttpHandler &http_handler,
                      TimeHandler &time_handler);
 
@@ -30,9 +29,9 @@ int do_battery_turn_on_off(int *curr_interval_idx,
                            int *time_left_to_next_interval,
                            int *time_to_charge,
                            int charging_times_arr[],
-                           bool is_charging_arr[],
                            HttpHandler &http_handler,
                            TimeHandler &time_handler);
+
 // ----------GLOBAL VARIABLES----------
 // HttpHandler http_handler;
 // TimeHandler time_handler;
@@ -78,8 +77,7 @@ void handle_battery_turn_on_off(unsigned long *time_to_next_event_millis,
   static TimeHandler time_handler;
 
   // ----------ARRAYS----------
-  static int charging_times_arr[ARR_LEN];
-  static bool is_charging_arr[ARR_LEN];
+  static int charging_times_arr[NBR_OF_INTERVALS];
 
   // ----------FLOW CONTROL VARIABLES----------
   static bool first_loop = true;
@@ -89,7 +87,7 @@ void handle_battery_turn_on_off(unsigned long *time_to_next_event_millis,
   {
     do_battery_turn_on_off(&curr_interval_idx,
                            time_to_next_event_millis, time_left_to_next_interval,
-                           time_to_charge, charging_times_arr, is_charging_arr, http_handler,
+                           time_to_charge, charging_times_arr, http_handler,
                            time_handler);
   }
   else
@@ -104,7 +102,6 @@ void handle_battery_turn_on_off(unsigned long *time_to_next_event_millis,
                      time_left_to_next_interval,
                      time_to_charge,
                      charging_times_arr,
-                     is_charging_arr,
                      http_handler,
                      time_handler);
     do_battery_turn_on_off(&curr_interval_idx,
@@ -112,7 +109,6 @@ void handle_battery_turn_on_off(unsigned long *time_to_next_event_millis,
                            time_left_to_next_interval,
                            time_to_charge,
                            charging_times_arr,
-                           is_charging_arr,
                            http_handler,
                            time_handler);
   }
@@ -123,13 +119,13 @@ int do_battery_turn_on_off(int *curr_interval_idx,
                            int *time_left_to_next_interval,
                            int *time_to_charge,
                            int charging_times_arr[],
-                           bool is_charging_arr[],
                            HttpHandler &http_handler,
                            TimeHandler &time_handler)
 {
   if (*time_left_to_next_interval == 0)
   {
     *curr_interval_idx = (*curr_interval_idx + 1) % ARR_LEN;
+
     if (*curr_interval_idx == SYNC_SERVER_0000_IDX ||
         *curr_interval_idx == SYNC_SERVER_0600_IDX ||
         *curr_interval_idx == SYNC_SERVER_1200_IDX ||
@@ -140,7 +136,6 @@ int do_battery_turn_on_off(int *curr_interval_idx,
                        time_left_to_next_interval,
                        time_to_charge,
                        charging_times_arr,
-                       is_charging_arr,
                        http_handler,
                        time_handler);
     }
@@ -182,13 +177,10 @@ int sync_with_server(int *curr_interval_idx,
                      int *time_left_to_next_interval,
                      int *time_to_charge,
                      int charging_times_arr[],
-                     bool is_charging_arr[],
                      HttpHandler &http_handler,
                      TimeHandler &time_handler)
 {
-  recv_charging_data(charging_times_arr,
-                     is_charging_arr,
-                     http_handler);
+  recv_charging_data(charging_times_arr, http_handler);
   recv_curr_interval(http_handler, time_handler);
 
   *curr_interval_idx = time_handler.get_curr_interval();

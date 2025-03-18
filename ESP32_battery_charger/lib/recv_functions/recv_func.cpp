@@ -35,12 +35,10 @@ int recv_curr_interval(HttpHandler &http_handler, TimeHandler &time_handler)
 }
 
 int recv_charging_data(int charging_times_arr[],
-                       bool is_charging_arr[],
                         HttpHandler &http_handler)
 {
   int ret_code = http_handler.get_charging_data(charging_times_arr,
-                                                is_charging_arr,
-                                                ARR_LEN,
+                                                NBR_OF_INTERVALS,
                                                 CHARGING_TIME,
                                                 IS_CHARGING,
                                                 SERVER_ADDRESS,
@@ -48,13 +46,11 @@ int recv_charging_data(int charging_times_arr[],
   if (ret_code == SUCCESS)
   {
     Serial.println("###SUCCESS - data received###\nPrinting data:");
-    Serial.printf("nbr\tis_charging\tcharging_time [min]\n");
+    Serial.printf("nbr\tcharging_time [min]\n");
 
     for (int i = 0; i < 3; i++)
     {
-      Serial.printf("%d\t%d\t\t%d\n", i,
-                    is_charging_arr[i],
-                    charging_times_arr[i]);
+      Serial.printf("%d\t%d\t\n", i, charging_times_arr[i]);
     }
     Serial.flush();
     return SUCCESS;

@@ -12,7 +12,6 @@ public:
     HttpHandler() : recv_data_size(0) {}
 
     int get_charging_data(int charging_times_arr[],
-                            bool is_charging_arr[],
                             int arr_len,
                             const char *charging_time_key, 
                             const char *is_charging_key,

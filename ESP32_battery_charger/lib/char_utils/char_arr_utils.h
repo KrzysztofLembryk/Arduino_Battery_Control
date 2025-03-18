@@ -7,7 +7,6 @@
  * We assume each char array is null-terminated. Otherwise, undefined behavior
  * will occur.
  */
-
 class CharArrUtils
 {
 public:

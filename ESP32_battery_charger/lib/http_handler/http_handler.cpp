@@ -38,7 +38,6 @@ int HttpHandler::get_curr_interval(TimeHandler &time_handler,
 }
 
 int HttpHandler::get_charging_data(int charging_times_arr[],
-                                    bool is_charging_arr[],
                                     int arr_len,
                                     const char *charging_time_key, 
                                     const char *is_charging_key,
@@ -52,10 +51,7 @@ int HttpHandler::get_charging_data(int charging_times_arr[],
         return ret_code;
 
     for (int i = 0; i < arr_len; i++)
-    {
         charging_times_arr[i] = json_doc[charging_time_key][i].as<int>();
-        is_charging_arr[i] = json_doc[is_charging_key][i].as<bool>();
-    }
     
     return SUCCESS;
 }
