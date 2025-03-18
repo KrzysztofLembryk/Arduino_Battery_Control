@@ -13,13 +13,9 @@
 void wait_for_few_seconds();
 void init_WiFi();
 
-int handle_battery_turn_on_off(int *time_to_next_event,
+void handle_battery_turn_on_off(unsigned long *time_to_next_event_millis,
                                int *time_left_to_next_interval,
-                               int *time_to_charge,
-                               int charging_times_arr[],
-                               bool is_charging_arr[],
-                               HttpHandler &http_handler,
-                               TimeHandler &time_handler);
+                               int *time_to_charge);
 
 int sync_with_server(int *curr_interval_idx,
                      int *time_left_to_next_interval,
@@ -30,7 +26,7 @@ int sync_with_server(int *curr_interval_idx,
                      TimeHandler &time_handler);
 
 int do_battery_turn_on_off(int *curr_interval_idx,
-                           int *time_to_next_event,
+                           unsigned long *time_to_next_event_millis,
                            int *time_left_to_next_interval,
                            int *time_to_charge,
                            int charging_times_arr[],
@@ -52,6 +48,31 @@ void setup()
 
 void loop()
 {
+  // ----------MEASURING TIME VARIABLES----------
+  static unsigned long current_millis = 0;
+  static unsigned long prev_millis = 0;
+  static unsigned long time_to_next_event_millis = 0;
+  static int time_to_charge = 0;
+  static int time_left_to_next_interval = 0;
+
+  // ----------MAIN PROGRAM LOOP----------
+  current_millis = millis();
+
+  if (current_millis - prev_millis >= time_to_next_event_millis)
+  {
+    prev_millis = current_millis;
+
+    handle_battery_turn_on_off(&time_to_next_event_millis,
+                               &time_left_to_next_interval,
+                               &time_to_charge);
+  }
+}
+
+void handle_battery_turn_on_off(unsigned long *time_to_next_event_millis,
+                               int *time_left_to_next_interval,
+                               int *time_to_charge)
+                               
+{
   // ----------HANDLER CLASSES OBJECTS-----------
   static HttpHandler http_handler;
   static TimeHandler time_handler;
@@ -60,91 +81,14 @@ void loop()
   static int charging_times_arr[ARR_LEN];
   static bool is_charging_arr[ARR_LEN];
 
-  // ----------MEASURING TIME VARIABLES----------
-  static unsigned long current_millis = 0;
-  static unsigned long prev_millis = 0;
-  static unsigned long time_to_next_event = 0;
-  static unsigned long time_to_charge = 0;
-  static unsigned long time_left_to_next_interval = 0;
-
-  int curr_interval_idx = -1;
-  // ----------CONTROL VARIABLES----------
-
-  // ----------FUNCTIONS CALLED ONCE DURING FIRST LOOP----------
-
-  // ----------MAIN PROGRAM LOOP----------
-  current_millis = millis();
-
-  if (current_millis - prev_millis >= time_to_next_event)
-  {
-    prev_millis = current_millis;
-
-    if (curr_interval_idx == -1)
-    {
-      recv_charging_data(charging_times_arr,
-                         is_charging_arr,
-                         http_handler);
-      recv_curr_interval(http_handler, time_handler);
-
-      curr_interval_idx = time_handler.get_curr_interval();
-      time_left_to_next_interval = time_handler.get_time_till_next_interval();
-      time_to_charge = charging_times_arr[curr_interval_idx];
-
-      if (time_left_to_next_interval < time_to_charge)
-      {
-        time_to_next_event = time_left_to_next_interval * INTERVAL_10_S;
-        time_left_to_next_interval = 0;
-        time_to_charge = 0;
-        Serial.println("###############CHARGING START###############");
-      }
-      else
-      {
-        if (time_to_charge == 0)
-        {
-          Serial.println("###############CHARGING STOP###############");
-          time_to_next_event = time_left_to_next_interval * INTERVAL_10_S;
-          time_left_to_next_interval = 0;
-        }
-        else
-        {
-          Serial.println("###############CHARGING START###############");
-          time_left_to_next_interval -= time_to_charge;
-          time_to_next_event = time_to_charge * INTERVAL_10_S;
-          time_to_charge = 0;
-        }
-      }
-    }
-    else
-    {
-      if (time_left_to_next_interval == 0)
-      {
-        curr_interval_idx = (curr_interval_idx + 1) % ARR_LEN;
-        time_left_to_next_interval = INTERVAL_15_MIN;
-        time_to_charge = charging_times_arr[curr_interval_idx];
-      }
-      else
-      {
-      }
-    }
-  }
-}
-
-int handle_battery_turn_on_off(int *time_to_next_event,
-                               int *time_left_to_next_interval,
-                               int *time_to_charge,
-                               int charging_times_arr[],
-                               bool is_charging_arr[],
-                               HttpHandler &http_handler,
-                               TimeHandler &time_handler)
-{
+  // ----------FLOW CONTROL VARIABLES----------
   static bool first_loop = true;
   static int curr_interval_idx = -1;
 
   if (!first_loop)
   {
-
     do_battery_turn_on_off(&curr_interval_idx,
-                           time_to_next_event, time_left_to_next_interval,
+                           time_to_next_event_millis, time_left_to_next_interval,
                            time_to_charge, charging_times_arr, is_charging_arr, http_handler,
                            time_handler);
   }
@@ -155,6 +99,7 @@ int handle_battery_turn_on_off(int *time_to_next_event,
      * our time with real time
      */
     first_loop = false;
+
     sync_with_server(&curr_interval_idx,
                      time_left_to_next_interval,
                      time_to_charge,
@@ -162,18 +107,19 @@ int handle_battery_turn_on_off(int *time_to_next_event,
                      is_charging_arr,
                      http_handler,
                      time_handler);
-
     do_battery_turn_on_off(&curr_interval_idx,
-                           time_to_next_event, time_left_to_next_interval,
-                           time_to_charge, charging_times_arr, is_charging_arr, http_handler,
+                           time_to_next_event_millis,
+                           time_left_to_next_interval,
+                           time_to_charge,
+                           charging_times_arr,
+                           is_charging_arr,
+                           http_handler,
                            time_handler);
-
-
   }
 }
 
 int do_battery_turn_on_off(int *curr_interval_idx,
-                           int *time_to_next_event,
+                           unsigned long *time_to_next_event_millis,
                            int *time_left_to_next_interval,
                            int *time_to_charge,
                            int charging_times_arr[],
@@ -200,16 +146,16 @@ int do_battery_turn_on_off(int *curr_interval_idx,
     }
     else
     {
-      // !!! INTERVAL_15_MIN - is in miliseconds, whereas time_to_charge is in
+      // !!! INTERVAL_15MIN_MILLIS - is in miliseconds, whereas time_to_charge is in
       // minutes -- NEED TO CHANGE IT for whole alg to work
-      *time_left_to_next_interval = INTERVAL_15_MIN;
+      *time_left_to_next_interval = 15;
       *time_to_charge = charging_times_arr[*curr_interval_idx];
     }
   }
 
   if (*time_left_to_next_interval < *time_to_charge)
   {
-    *time_to_next_event = *time_left_to_next_interval * INTERVAL_10_S;
+    *time_to_next_event_millis = *time_left_to_next_interval * INTERVAL_10S_MILLIS;
     *time_left_to_next_interval = 0;
     *time_to_charge = 0;
     Serial.println("###############CHARGING START###############");
@@ -219,14 +165,14 @@ int do_battery_turn_on_off(int *curr_interval_idx,
     if (*time_to_charge == 0)
     {
       Serial.println("###############CHARGING STOP###############");
-      *time_to_next_event = *time_left_to_next_interval * INTERVAL_10_S;
+      *time_to_next_event_millis = *time_left_to_next_interval * INTERVAL_10S_MILLIS;
       *time_left_to_next_interval = 0;
     }
     else
     {
       Serial.println("###############CHARGING START###############");
       *time_left_to_next_interval -= *time_to_charge;
-      *time_to_next_event = *time_to_charge * INTERVAL_10_S;
+      *time_to_next_event_millis = *time_to_charge * INTERVAL_10S_MILLIS;
       *time_to_charge = 0;
     }
   }

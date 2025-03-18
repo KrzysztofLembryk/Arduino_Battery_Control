@@ -17,13 +17,14 @@ constexpr const char *CHARGING_TIME = "chargingTime";
 constexpr const char *IS_CHARGING = "isCharging";
 constexpr const char *CURR_TIME = "currTime";
 
-// ----------TIME CONSTANTS----------
-constexpr int INTERVAL_60_S = 60000;
-constexpr int INTERVAL_10_S = 10000;
-constexpr int INTERVAL_GET_DATA_FROM_SERVER = 1 * INTERVAL_10_S;
-constexpr int INTERVAL_GET_TIME_FROM_SERVER = 1 * INTERVAL_10_S;
-constexpr int INTERVAL_15_MIN = 15 * INTERVAL_10_S;
+// ----------TIME MILLIS CONSTANTS----------
+constexpr int INTERVAL_60S_MILLIS = 60000;
+constexpr int INTERVAL_10S_MILLIS = 10000;
+constexpr int INTERVAL_GET_DATA_FROM_SERVER = 1 * INTERVAL_10S_MILLIS;
+constexpr int INTERVAL_GET_TIME_FROM_SERVER = 1 * INTERVAL_10S_MILLIS;
+constexpr int INTERVAL_15MIN_MILLIS = 15 * INTERVAL_10S_MILLIS;
 
+// ----------SYNC WITH SERVER CONSTANTS---------- 
 /**
  * In 24 hours we have 96 15min intervals, 00:00 has idx = 0, 23:45 idx = 95.
  * We define five times when we sync with our server so that our timer does not
@@ -32,7 +33,7 @@ constexpr int INTERVAL_15_MIN = 15 * INTERVAL_10_S;
 constexpr int SYNC_SERVER_0000_IDX = 0;
 constexpr int SYNC_SERVER_0600_IDX = 24;
 constexpr int SYNC_SERVER_1200_IDX = 48;
-constexpr int SYNC_SERVER_1700_IDX = 68;
+constexpr int SYNC_SERVER_1700_IDX = 69;
 constexpr int SYNC_SERVER_2200_IDX = 88;
 
 // ----------DATA SIZE CONSTANTS----------
