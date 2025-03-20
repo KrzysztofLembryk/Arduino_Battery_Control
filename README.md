@@ -1,5 +1,11 @@
 # Arduino_Battery_Control
 
+## PROBLEM WITH ARDUINO RESETTING after uploading programme
+-  My experience with yield() for the ESP8266 is because the core libraries have implemented the watchdog timer. If you take too long in the loop() function (around 1 sec I think) the WDT will cause a hardware reset. One thing that yield() does is reset the WDT timer.
+- So because WiFi connection might not be the fastest and waiting times
+might be quite long, in order not to allow our arduino to reset  we 
+should use yield 
+
 ## ESP8266 01S datasheet
 https://www.xecor.com/blog/esp-01-pinout-programming-datasheet-and-comparison
 

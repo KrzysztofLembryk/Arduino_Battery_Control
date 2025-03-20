@@ -4,7 +4,7 @@
 // ----------SERVER ENDPOINTS----------
 constexpr const char *SERVER_ADDRESS = "http://192.168.43.112:8000";
 constexpr const char *CHARGING_DATA_ENDPOINT = "/chargingData";
-constexpr const char *CURR_TIME_ENDPOINT = "/currTime";
+// constexpr const char *CURR_TIME_ENDPOINT = "/currTime";
 constexpr const char *CURR_INTERVAL_ENDPOINT = "/currInterval";
 
 // ----------WIFI CONSTANTS----------
@@ -33,7 +33,7 @@ constexpr int INTERVAL_15MIN_MILLIS = 15 * INTERVAL_10S_MILLIS;
 constexpr int SYNC_SERVER_0000_IDX = 0;
 constexpr int SYNC_SERVER_0600_IDX = 24;
 constexpr int SYNC_SERVER_1200_IDX = 48;
-constexpr int SYNC_SERVER_1700_IDX = 69;
+constexpr int SYNC_SERVER_1715_IDX = 69;
 constexpr int SYNC_SERVER_2200_IDX = 88;
 
 // ----------DATA SIZE CONSTANTS----------

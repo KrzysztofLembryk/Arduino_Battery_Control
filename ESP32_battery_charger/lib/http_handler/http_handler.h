@@ -4,7 +4,6 @@
 #include <ArduinoJson.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
-#include "../time_handler/time_handler.h"
 
 class HttpHandler
 {
@@ -18,13 +17,14 @@ public:
                             const char *server_name, 
                             const char *endpoint_name);
 
-    int get_curr_time(TimeHandler &time_handler,
+    int get_curr_interval(int *curr_charging_interval_idx,
+                        int *time_till_next_interval,
                         const char *server_name, 
                         const char *endpoint_name);
 
-    int get_curr_interval(TimeHandler &time_handler,
-                        const char *server_name, 
-                        const char *endpoint_name);
+    // int get_curr_time(TimeHandler &time_handler,
+    //                     const char *server_name, 
+    //                     const char *endpoint_name);
 
 private:
     // CLASS CONSTANTS

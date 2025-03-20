@@ -18,7 +18,7 @@ async def root():
     return  json_data
 
 
-@app.get("/currTime")
+@app.get("/currInterval")
 async def get_curr_time():
     now = datetime.datetime.now()
     # Total minutes since 0:00
@@ -28,6 +28,5 @@ async def get_curr_time():
     # Minutes until the next interval
     minutes_till_next_interval = 15 - (total_minutes % 15)  
     print(f"#### currIntervalIdx {curr_interval_idx}, minutesTillNext {minutes_till_next_interval}####")
-    return {"currTime": now.time(),
-            "currIntervalIdx": curr_interval_idx,
+    return {"currIntervalIdx": curr_interval_idx,
             "minutesTillNextInterval": minutes_till_next_interval}

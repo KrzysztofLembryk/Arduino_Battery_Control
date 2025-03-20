@@ -6,6 +6,7 @@ int TimeHandler::extract_curr_interval_from_json(JsonDocument &json_doc)
 {
     curr_charging_interval_idx = json_doc["currIntervalIdx"].as<int>();
     time_till_next_interval = json_doc["minutesTillNextInterval"].as<int>();
+    return SUCCESS;
 }
 
 /**

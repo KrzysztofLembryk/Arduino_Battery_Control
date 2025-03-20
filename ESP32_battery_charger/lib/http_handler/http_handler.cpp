@@ -4,37 +4,44 @@
 
 // --------------PUBLIC METHODS IMPL--------------
 
-int HttpHandler::get_curr_time(TimeHandler &time_handler,
-                                const char *server_name, 
-                                const char *endpoint_name)
-{
-    JsonDocument json_doc;
-    int ret_code = get_data_to_json(json_doc, server_name, endpoint_name);
+// int HttpHandler::get_curr_time(TimeHandler &time_handler,
+//                                 const char *server_name, 
+//                                 const char *endpoint_name)
+// {
+//     JsonDocument json_doc;
+//     int ret_code = get_data_to_json(json_doc, server_name, endpoint_name);
 
-
-    if (ret_code != SUCCESS)
-        return ret_code;
+//     if (ret_code != SUCCESS)
+//         return ret_code;
     
-    time_handler.extract_HM_time_from_json(json_doc);
-    time_handler.print_time();
+//     time_handler.extract_HM_time_from_json(json_doc);
+//     time_handler.print_time();
 
-    return SUCCESS;
-}
+//     return SUCCESS;
+// }
 
-int HttpHandler::get_curr_interval(TimeHandler &time_handler,
+constexpr const char *CURR_INTERVAL_IDX = "currIntervalIdx";
+constexpr const char *MINUTES_TILL_NEXT_INTERVAL = "minutesTillNextInterval";
+
+int HttpHandler::get_curr_interval(int *curr_charging_interval_idx,
+                                    int *time_till_next_interval,
                                     const char *server_name, 
                                     const char *endpoint_name)
 {
+    Serial.println("get curr interval");
     JsonDocument json_doc;
     int ret_code = get_data_to_json(json_doc, server_name, endpoint_name);
 
     if (ret_code != SUCCESS)
+    {
+        Serial.println("get curr interval getting data to json ERROR");
         return ret_code;
+    }
     
-    time_handler.extract_curr_interval_from_json(json_doc);
+    *curr_charging_interval_idx = json_doc[CURR_INTERVAL_IDX].as<int>();
+    *time_till_next_interval = json_doc[MINUTES_TILL_NEXT_INTERVAL].as<int>();
 
     return SUCCESS;
-
 }
 
 int HttpHandler::get_charging_data(int charging_times_arr[],
@@ -61,6 +68,7 @@ int HttpHandler::get_data_to_json(JsonDocument &json_doc,
                                     const char *server_name, 
                                     const char *endpoint_name)
 {
+    Serial.println("get data to json");
     int recv_data_error = get_data(server_name, endpoint_name);
 
     if (recv_data_error != SUCCESS)
@@ -100,6 +108,7 @@ int HttpHandler::get_data(const char *server_name, const char *endpoint_name)
             if (httpCode == HTTP_CODE_OK ||
                 httpCode == HTTP_CODE_MOVED_PERMANENTLY)
             {
+                Serial.println("HANDLING INCOMING DATA STREAM");
                 ret_val = handle_incoming_data_stream();
             }
             else 
@@ -112,6 +121,7 @@ int HttpHandler::get_data(const char *server_name, const char *endpoint_name)
             Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
         }
 
+        Serial.println("[HTTP] END");
         http.end();
         return ret_val;
     }
@@ -131,7 +141,7 @@ int HttpHandler::handle_incoming_data_stream()
 
     recv_data_size = 0;
     int incoming_data_size = http.getSize();
-
+    Serial.printf("INCOMING DATA SIZE: %d\n", incoming_data_size);
     if (incoming_data_size > RECV_BUFF_SIZE)
     {
         Serial.println("incoming data size > recv_buff_size");
@@ -140,6 +150,7 @@ int HttpHandler::handle_incoming_data_stream()
 
     WiFiClient *stream = http.getStreamPtr();
     int shift = 0;
+    int delay_counter = 0;
 
     // incoming_data_size = -1 --> means no info
     while (http.connected() &&
@@ -155,6 +166,9 @@ int HttpHandler::handle_incoming_data_stream()
 
         if (available_size)
         {
+            // we zero delay counter since we got some data
+            delay_counter = 0;
+
             int bytes_read = stream->readBytes(recv_buff + shift,
             ((available_size > RECV_BUFF_SIZE - shift) ? 
                 RECV_BUFF_SIZE - shift : available_size));
@@ -170,6 +184,18 @@ int HttpHandler::handle_incoming_data_stream()
             // if we added bytes_read to shift
             shift += available_size;
             recv_data_size = shift;
+        }
+        else 
+        {
+            // we wait a while, since WiFi connection might be slow
+            // in HTTPClient send_request impl they use delay(100)
+            delay(100);
+            delay_counter++;
+            if (delay_counter > 10)
+            {
+                Serial.println("HANDLE INCOMING DATA STREAM, delay counter > 10, we waited too long for data");
+                return ERROR_EXCEEDED_WAIT_TIME_FOR_DATA_FROM_SERVER;
+            }
         }
     }
 

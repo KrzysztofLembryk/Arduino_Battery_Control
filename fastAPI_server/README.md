@@ -18,3 +18,8 @@ change them to allow any connections for private networks
 - 7) Now everything should work and you should be able to connect to your server
 from other devices
 - 8) if it's still not working check if your WiFi is recognised as private
+
+# TODO 
+- dodać endpoint dla usera że może modyfikować kiedy włączać, kiedy wyłączać itp
+(typu włącz/wyłącz, tak zwane presets - czyli kilka możliwych wyborów, 
+przekroczenie thresholdu mocy itp itd)
