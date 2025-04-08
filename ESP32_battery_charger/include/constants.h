@@ -13,13 +13,14 @@ constexpr const char *PASSWORD = "12345678";
 constexpr int SERIAL_BAUD_RATE = 115200;
 
 // ----------JSON KEY STRINGS----------
-constexpr const char *CHARGING_TIME = "chargingTime";
+constexpr const char *CHARGING_TIME_KEY = "chargingTime";
 constexpr const char *IS_CHARGING = "isCharging";
 constexpr const char *CURR_TIME = "currTime";
 
 // ----------TIME MILLIS CONSTANTS----------
 constexpr int INTERVAL_60S_MILLIS = 60000;
 constexpr int INTERVAL_10S_MILLIS = 10000;
+constexpr int INTERVAL_5S_MILLIS = 5000;
 constexpr int INTERVAL_GET_DATA_FROM_SERVER = 1 * INTERVAL_10S_MILLIS;
 constexpr int INTERVAL_GET_TIME_FROM_SERVER = 1 * INTERVAL_10S_MILLIS;
 constexpr int INTERVAL_15MIN_MILLIS = 15 * INTERVAL_10S_MILLIS;
@@ -35,6 +36,9 @@ constexpr int SYNC_SERVER_0600_IDX = 24;
 constexpr int SYNC_SERVER_1200_IDX = 48;
 constexpr int SYNC_SERVER_1715_IDX = 69;
 constexpr int SYNC_SERVER_2200_IDX = 88;
+
+// ----------ERROR CONTROL FLOW CONSTANTS----------
+constexpr int RETRY_NBR = 5;
 
 // ----------DATA SIZE CONSTANTS----------
 constexpr int ARR_LEN = 96;

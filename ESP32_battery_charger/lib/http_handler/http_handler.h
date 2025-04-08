@@ -13,7 +13,6 @@ public:
     int get_charging_data(int charging_times_arr[],
                             int arr_len,
                             const char *charging_time_key, 
-                            const char *is_charging_key,
                             const char *server_name, 
                             const char *endpoint_name);
 
@@ -28,7 +27,7 @@ public:
 
 private:
     // CLASS CONSTANTS
-    static constexpr const int SERVER_ENDPOINT_MAX_LEN = 100;
+    static constexpr const int SERVER_ENDPOINT_MAX_LEN = 1024;
     static constexpr const int RECV_BUFF_SIZE = 1024;
 
     // CLASS MEMBER VARIABLES

@@ -15,6 +15,11 @@ async def root():
     print(f"Byte size of JSON data: {byte_size}")
     # print(f"json_data {json_data}")
 
+     # Pretty print the charging data
+    print("Charging Data (idx: value):")
+    for idx, value in enumerate(json_data["chargingTime"]):
+        print(f"{idx}: {value}")
+
     return  json_data
 
 
@@ -27,6 +32,6 @@ async def get_curr_time():
 
     # Minutes until the next interval
     minutes_till_next_interval = 15 - (total_minutes % 15)  
-    print(f"#### currIntervalIdx {curr_interval_idx}, minutesTillNext {minutes_till_next_interval}####")
+    print(f"#### currIntervalIdx {curr_interval_idx}, minutesTillNext {minutes_till_next_interval}, curr_time: {now}####")
     return {"currIntervalIdx": curr_interval_idx,
             "minutesTillNextInterval": minutes_till_next_interval}

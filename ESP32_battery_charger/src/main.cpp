@@ -90,23 +90,31 @@ void handle_battery_turn_on_off(unsigned long *time_to_next_event_millis,
   {
     /**
      * During first loop we need to fetch data from the server to synchronise
-     * our time with real time
+     * our time with real time. 
+     * If sunc_with_server or do_battery_turn_on_off fails we set 
+     * time_to_next_event to 0 and dont change first_loop to false, because we
+     * want to ensure that we fetch data SUCCESSFULLY during first loop
      */
     Serial.println("FIRST LOOOP");
-    first_loop = false;
 
-    sync_with_server(&curr_interval_idx,
+    if (sync_with_server(&curr_interval_idx,
                      time_left_to_next_interval,
                      time_to_charge,
                      charging_times_arr,
-                     http_handler_global);
+                     http_handler_global) != SUCCESS ||
+        do_battery_turn_on_off(&curr_interval_idx,
+                              time_to_next_event_millis,
+                              time_left_to_next_interval,
+                              time_to_charge,
+                              charging_times_arr,
+                              http_handler_global) != SUCCESS)
+    {
+      Serial.println("[handle_battery_turn_on_off] FIRST LOOP FAILED");
+      *time_to_next_event_millis = 0;
+      return;
+    }
 
-    do_battery_turn_on_off(&curr_interval_idx,
-                           time_to_next_event_millis,
-                           time_left_to_next_interval,
-                           time_to_charge,
-                           charging_times_arr,
-                           http_handler_global);
+    first_loop = false;
   }
 }
 
@@ -133,11 +141,17 @@ int do_battery_turn_on_off(int *curr_interval_idx,
         *curr_interval_idx == SYNC_SERVER_1715_IDX ||
         *curr_interval_idx == SYNC_SERVER_2200_IDX)
     {
-      sync_with_server(curr_interval_idx,
+      // in battery_turn_on_off if sync_with_server fails, we don't care we just
+      // continue with data we already have till the next sync with server 
+      // interval
+      if (sync_with_server(curr_interval_idx,
                        time_left_to_next_interval,
                        time_to_charge,
                        charging_times_arr,
-                       http_handler);
+                       http_handler) != SUCCESS)
+      {
+        Serial.println("[do_battery_turn_on_off] FAILED to sync with server");
+      }
     }
     else
     {
@@ -163,10 +177,12 @@ int do_battery_turn_on_off(int *curr_interval_idx,
      * time to the end of current interval, thus we charge for whole 
      * time_left_to_next_interval
      */
-    *time_to_next_event_millis = *time_left_to_next_interval * INTERVAL_10S_MILLIS;
+    Serial.println("###############CHARGING START###############");
+    Serial.println("time_to_charge: " + String(*time_to_charge) + 
+      ", time_left_to_next_interval: " + String(*time_left_to_next_interval));
+    *time_to_next_event_millis = *time_left_to_next_interval * INTERVAL_5S_MILLIS;
     *time_left_to_next_interval = 0;
     *time_to_charge = 0;
-    Serial.println("###############CHARGING START###############");
   }
   else
   {
@@ -178,7 +194,9 @@ int do_battery_turn_on_off(int *curr_interval_idx,
        * thus time_to_next_event should be equal to time_left_to_next_interval
        */
       Serial.println("###############CHARGING STOP###############");
-      *time_to_next_event_millis = *time_left_to_next_interval * INTERVAL_10S_MILLIS;
+      Serial.println("time_left_to_next_interval: " + String(*time_left_to_next_interval));
+
+      *time_to_next_event_millis = *time_left_to_next_interval * INTERVAL_5S_MILLIS;
       *time_left_to_next_interval = 0;
     }
     else
@@ -190,8 +208,10 @@ int do_battery_turn_on_off(int *curr_interval_idx,
        * time_left_to_next_interval
        */
       Serial.println("###############CHARGING START###############");
+    Serial.println("time_to_charge: " + String(*time_to_charge) + 
+      ", time_left_to_next_interval: " + String(*time_left_to_next_interval));
       *time_left_to_next_interval -= *time_to_charge;
-      *time_to_next_event_millis = *time_to_charge * INTERVAL_10S_MILLIS;
+      *time_to_next_event_millis = *time_to_charge * INTERVAL_5S_MILLIS;
       *time_to_charge = 0;
     }
   }
@@ -207,8 +227,11 @@ int sync_with_server(int *curr_interval_idx,
 {
   Serial.println("SYNCING WITH SERVER");
 
-  recv_charging_data(charging_times_arr, http_handler);
-  recv_curr_interval(curr_interval_idx, time_left_to_next_interval,http_handler);
+  if (recv_charging_data(charging_times_arr, http_handler) != SUCCESS ||
+      recv_curr_interval(curr_interval_idx, time_left_to_next_interval,http_handler) != SUCCESS)
+  {
+    return ERROR;
+  }
 
   *time_to_charge = charging_times_arr[*curr_interval_idx];
 
