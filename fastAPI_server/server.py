@@ -10,7 +10,7 @@ app = FastAPI()
 @app.get("/chargingData")
 async def root():
     # np.random.seed(0)
-    json_data = {"chargingTime": [np.random.randint(0, 16) for x in range(96)]}
+    json_data = {"chargingTime": [np.random.randint(0, 6) for x in range(96)]}
     byte_size = sys.getsizeof(json_data)
     print(f"Byte size of JSON data: {byte_size}")
     # print(f"json_data {json_data}")

@@ -84,6 +84,10 @@ int HttpHandler::get_data_to_json(JsonDocument &json_doc,
 
 int HttpHandler::get_data(const char *server_name, const char *endpoint_name)
 {
+    /**
+     * CharArrUtils::concat_char_arr creates a string (URL) from 
+     * server_endpoint_name, server_name, endpoint_name
+     */
     int ret_val = CharArrUtils::concat_char_arr(server_endpoint_name,
                                                 server_name,
                                                 endpoint_name,

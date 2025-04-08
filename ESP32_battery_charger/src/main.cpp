@@ -71,8 +71,6 @@ void handle_battery_turn_on_off(unsigned long *time_to_next_event_millis,
                                int *time_left_to_next_interval,
                                int *time_to_charge)
 {
-  Serial.println("IN handle_battery turn on off, delay 4000");
-  delay(4000);
   // ----------ARRAYS----------
   static int charging_times_arr[NBR_OF_INTERVALS];
 
@@ -82,19 +80,11 @@ void handle_battery_turn_on_off(unsigned long *time_to_next_event_millis,
 
   if (!first_loop)
   {
-    // do_battery_turn_on_off(&curr_interval_idx,
-    //                        time_to_next_event_millis, time_left_to_next_interval,
-    //                        time_to_charge, charging_times_arr, http_handler_global);
-    Serial.println("NOT FIRST LOOP DOING STUFF");
-    sync_with_server(&curr_interval_idx,
-                     time_left_to_next_interval,
-                     time_to_charge,
-                     charging_times_arr,
-                     http_handler_global);
-
-    // DELETE THIS AFTER TESTS
-    *time_to_next_event_millis = *time_to_charge * INTERVAL_10S_MILLIS;
-    // DELETE THIS AFTER TESTS
+    do_battery_turn_on_off(&curr_interval_idx,
+                           time_to_next_event_millis, time_left_to_next_interval,
+                           time_to_charge, 
+                           charging_times_arr, 
+                           http_handler_global);
   }
   else
   {
@@ -110,17 +100,13 @@ void handle_battery_turn_on_off(unsigned long *time_to_next_event_millis,
                      time_to_charge,
                      charging_times_arr,
                      http_handler_global);
-      
-    // DELETE THIS AFTER TESTS
-    *time_to_next_event_millis = *time_left_to_next_interval * INTERVAL_10S_MILLIS;
-    // DELETE THIS AFTER TESTS
 
-    // do_battery_turn_on_off(&curr_interval_idx,
-    //                        time_to_next_event_millis,
-    //                        time_left_to_next_interval,
-    //                        time_to_charge,
-    //                        charging_times_arr,
-    //                        http_handler_global);
+    do_battery_turn_on_off(&curr_interval_idx,
+                           time_to_next_event_millis,
+                           time_left_to_next_interval,
+                           time_to_charge,
+                           charging_times_arr,
+                           http_handler_global);
   }
 }
 
@@ -133,6 +119,11 @@ int do_battery_turn_on_off(int *curr_interval_idx,
 {
   if (*time_left_to_next_interval == 0)
   {
+    /**
+     * if time_left_to_next_interval is 0 it means we go to the next interval
+     * therefore we increase curr_interval_idx AND check whether we should 
+     * sync with the server
+     */
     Serial.println("Time left to next interval == 0");
     *curr_interval_idx = (*curr_interval_idx + 1) % NBR_OF_INTERVALS;
 
@@ -150,15 +141,28 @@ int do_battery_turn_on_off(int *curr_interval_idx,
     }
     else
     {
-      // !!! INTERVAL_15MIN_MILLIS - is in miliseconds, whereas time_to_charge is in
-      // minutes -- NEED TO CHANGE IT for whole alg to work
-      *time_left_to_next_interval = 1;
+      /**
+       * If we don't sync with server we just set time_left_to_next_interval
+       * to 15 mintues, and time_to_charge we get from charging_times_array
+       * !!! time_left_to_next_interval is in MINUTES, but our time counting
+       * happens in milliseconds,
+       * --> thus when updating time_left_to_next_event <---
+       * #################################################################
+       * !!! WE SHOULD ALWAYS MULTIPLY BY CONSTANT INTERVAL_60S_MILLIS !!!
+       * #################################################################
+       */
+      *time_left_to_next_interval = 15; 
       *time_to_charge = charging_times_arr[*curr_interval_idx];
     }
   }
 
   if (*time_left_to_next_interval < *time_to_charge)
   {
+    /**
+     * This case means we have more time_to_charge in current interval than 
+     * time to the end of current interval, thus we charge for whole 
+     * time_left_to_next_interval
+     */
     *time_to_next_event_millis = *time_left_to_next_interval * INTERVAL_10S_MILLIS;
     *time_left_to_next_interval = 0;
     *time_to_charge = 0;
@@ -168,12 +172,23 @@ int do_battery_turn_on_off(int *curr_interval_idx,
   {
     if (*time_to_charge == 0)
     {
+      /**
+       * If time_to_charge is 0 it means either in current interval we have 
+       * charged the amount of minutes we wanted to OR we don't charge at all
+       * thus time_to_next_event should be equal to time_left_to_next_interval
+       */
       Serial.println("###############CHARGING STOP###############");
       *time_to_next_event_millis = *time_left_to_next_interval * INTERVAL_10S_MILLIS;
       *time_left_to_next_interval = 0;
     }
     else
     {
+      /**
+       * We want to charge in curr interval, but time left to next interval
+       * is more than time we want to charge, thus time_to_next_event is
+       * time_to_charge BUT we also substract time_to_charge from 
+       * time_left_to_next_interval
+       */
       Serial.println("###############CHARGING START###############");
       *time_left_to_next_interval -= *time_to_charge;
       *time_to_next_event_millis = *time_to_charge * INTERVAL_10S_MILLIS;
@@ -193,9 +208,7 @@ int sync_with_server(int *curr_interval_idx,
   Serial.println("SYNCING WITH SERVER");
 
   recv_charging_data(charging_times_arr, http_handler);
-  Serial.println("AFTER RECV CHARGING DATA");
   recv_curr_interval(curr_interval_idx, time_left_to_next_interval,http_handler);
-  Serial.println("AFTER RECV CURR INTERVAL");
 
   *time_to_charge = charging_times_arr[*curr_interval_idx];
 
