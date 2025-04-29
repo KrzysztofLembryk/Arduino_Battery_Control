@@ -1,6 +1,7 @@
 #include "http_handler.h"
 #include "../char_utils/char_arr_utils.h"
 #include "../../include/error_constants.h"
+#include "../../include/constants.h"
 
 // --------------PUBLIC METHODS IMPL--------------
 
@@ -23,6 +24,12 @@
 constexpr const char *CURR_INTERVAL_IDX = "currIntervalIdx";
 constexpr const char *MINUTES_TILL_NEXT_INTERVAL = "minutesTillNextInterval";
 
+/**
+ * If function encounters error variables:
+ * - curr_charging_interval_idx 
+ * - time_till_next_interval 
+ * ARE NOT MODIFIED
+ */
 int HttpHandler::get_curr_interval(int *curr_charging_interval_idx,
                                     int *time_till_next_interval,
                                     const char *server_name, 
@@ -44,10 +51,14 @@ int HttpHandler::get_curr_interval(int *curr_charging_interval_idx,
     return SUCCESS;
 }
 
+/**
+ * If function encounters error variable:
+ * - charging_times_arr
+ * IS NOT MODIFIED
+ */
 int HttpHandler::get_charging_data(int charging_times_arr[],
                                     int arr_len,
                                     const char *charging_time_key, 
-                                    const char *is_charging_key,
                                     const char *server_name, 
                                     const char *endpoint_name)
 {
@@ -64,6 +75,7 @@ int HttpHandler::get_charging_data(int charging_times_arr[],
 }
 
 // --------------PRIVATE METHODS IMPL--------------
+
 int HttpHandler::get_data_to_json(JsonDocument &json_doc,
                                     const char *server_name, 
                                     const char *endpoint_name)
@@ -76,17 +88,22 @@ int HttpHandler::get_data_to_json(JsonDocument &json_doc,
 
     recv_data_error = handle_json_deserialization(json_doc);
 
-    if (recv_data_error != SUCCESS)
-        return recv_data_error;
-    
-    return SUCCESS;
+    return recv_data_error;
 }
 
+/**
+ * Function when encountering any error tries RETRY_NBR times to fetch data from server, if still unsuccessful it propagates error further 
+ * --> Returns:
+ * - ERROR_GET_COULDNT_RECV_DATA - when httpCode > 0 but not OK or MOVED_PERMANENTLY
+ * - ERROR_GET_FAILED - when httpCode < 0
+ * - ERROR_GET_UNABLE_TO_CONNECT - when http.begin returned error
+ * - ERROR_DEST_SIZE_TO_SMALL - when concat_char_arr fails
+ */
 int HttpHandler::get_data(const char *server_name, const char *endpoint_name)
 {
     /**
      * CharArrUtils::concat_char_arr creates a string (URL) from 
-     * server_endpoint_name, server_name, endpoint_name
+     * server_name, endpoint_name and stores it in server_endpoint_name
      */
     int ret_val = CharArrUtils::concat_char_arr(server_endpoint_name,
                                                 server_name,
@@ -95,49 +112,68 @@ int HttpHandler::get_data(const char *server_name, const char *endpoint_name)
     
     if (ret_val != SUCCESS)
         return ret_val;
-    
-    ret_val = ERROR;
 
-    if (http.begin(client, server_endpoint_name))
+    int loop_nbr = 0;
+
+    // If we encounter error we try again for RETRY_NBR times
+    while (loop_nbr < RETRY_NBR)
     {
-        Serial.print("[HTTP] GET...\n");
-        // start connection and send HTTP header
-        int httpCode = http.GET();
-
-        // httpCode will be negative on error
-        if (httpCode > 0)
+        if (http.begin(client, server_endpoint_name))
         {
-            Serial.printf("[HTTP] GET... code: %d\n", httpCode);
+            Serial.print("[HTTP] GET...\n");
+            // start connection and send HTTP header
+            int httpCode = http.GET();
 
-            if (httpCode == HTTP_CODE_OK ||
-                httpCode == HTTP_CODE_MOVED_PERMANENTLY)
+            // httpCode will be negative on error
+            if (httpCode > 0)
             {
-                Serial.println("HANDLING INCOMING DATA STREAM");
-                ret_val = handle_incoming_data_stream();
+                Serial.printf("[HTTP] GET... code: %d\n", httpCode);
+
+                if (httpCode == HTTP_CODE_OK ||
+                    httpCode == HTTP_CODE_MOVED_PERMANENTLY)
+                {
+                    Serial.println("HANDLING INCOMING DATA STREAM");
+                    ret_val = handle_incoming_data_stream();
+                }
+                else 
+                {
+                    Serial.printf("[HTTP] GET... couldn't receive data\n");
+                    ret_val = ERROR_GET_COULDNT_RECV_DATA;
+                }
             }
-            else 
+            else
             {
-                Serial.printf("[HTTP] GET... couldn't recieve data\n");
+                Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
+                ret_val = ERROR_GET_FAILED;
             }
+
+            Serial.println("[HTTP] END");
+            http.end();
         }
         else
         {
-            Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
+            Serial.println("[HTTP] Unable to connect");
+            ret_val =  ERROR_GET_UNABLE_TO_CONNECT;
         }
 
-        Serial.println("[HTTP] END");
-        http.end();
+        if (ret_val != SUCCESS)
+        {
+            Serial.println("[HTTP] RETRYING...");
+            loop_nbr++;
+            continue;
+        }
         return ret_val;
     }
-    else
-    {
-        Serial.println("[HTTP] Unable to connect");
-        return ret_val;
-    }
+    return ret_val;
 }
 
 /**
  * Before receiveing incoming data, function clears recv_buff
+ * Returns:
+ * - ERROR_MORE_DATA_THAN_BUFF_SIZE - when read/incoming data > than RECV_BUFF
+ * - ERROR_EXCEEDED_WAIT_TIME_FOR_DATA_FROM_SERVER - when we waited 10x100ms
+ * for data from server and didnt get any
+ * - SUCCESS - otherwise
  */
 int HttpHandler::handle_incoming_data_stream()
 {
@@ -155,11 +191,13 @@ int HttpHandler::handle_incoming_data_stream()
     WiFiClient *stream = http.getStreamPtr();
     int shift = 0;
     int delay_counter = 0;
-
-    // incoming_data_size = -1 --> means no info
+    unsigned long prev_time = 0;
+    unsigned long curr_time = 0;
+    // incoming_data_size == -1 --> means no info
     while (http.connected() &&
            (incoming_data_size > 0 || incoming_data_size == -1))
     {
+        curr_time = millis();
         size_t available_size = stream->available();
 
         if (shift > RECV_BUFF_SIZE)
@@ -174,8 +212,8 @@ int HttpHandler::handle_incoming_data_stream()
             delay_counter = 0;
 
             int bytes_read = stream->readBytes(recv_buff + shift,
-            ((available_size > RECV_BUFF_SIZE - shift) ? 
-                RECV_BUFF_SIZE - shift : available_size));
+                                    available_size > RECV_BUFF_SIZE - shift ? 
+                                    RECV_BUFF_SIZE - shift : available_size);
 
             if (incoming_data_size > 0)
             {
@@ -189,11 +227,18 @@ int HttpHandler::handle_incoming_data_stream()
             shift += available_size;
             recv_data_size = shift;
         }
-        else 
+        else if (curr_time - prev_time >= 100) 
         {
-            // we wait a while, since WiFi connection might be slow
-            // in HTTPClient send_request impl they use delay(100)
-            delay(100);
+            /**
+             * WiFi connection is slow and might take more than 1s to get data
+             * from server. ESP32 has a watchdog which detects loops that take
+             * over 1s and  RESETS whole arduino, to prevent that we call yield
+             * which resets watchdog timer
+             */
+            prev_time = curr_time;
+
+            yield();
+
             delay_counter++;
             if (delay_counter > 10)
             {
@@ -209,6 +254,12 @@ int HttpHandler::handle_incoming_data_stream()
     return SUCCESS;
 }
 
+/**
+ * Function stores data from recv_buffer to json_doc
+ * Returns:
+ * - ERROR_DESERIALIZE_JSON if deserialization was unsuccessful,
+ * - SUCCESS otherwise
+ */
 int HttpHandler::handle_json_deserialization(JsonDocument &json_doc)
 {
     DeserializationError json_error = deserializeJson(json_doc, recv_buff);

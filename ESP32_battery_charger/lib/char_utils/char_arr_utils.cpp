@@ -5,10 +5,11 @@
 /**
  * We assume each src char array is null-terminated, and given char arr len 
  * is in fact it's length. Otherwise, undefined behavior will occur.
+ * --> src arr is appended to dest arr.
  * 
- * When len(src) > dest_size we clear dest and return error
- * 
- * src arr is appended to dest arr.
+ * Returns:
+ * - ERROR_DEST_SIZE_TO_SMALL - when src1 + src2 too long for char dest[]
+ * - SUCCESS - otherwise
  */
 int CharArrUtils::concat_char_arr(char dest[],
                                   const char *src1,
