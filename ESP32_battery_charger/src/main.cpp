@@ -77,18 +77,20 @@ void loop()
   {
     // For now to make it easier if we get charing data from client, changes are
     // visible from the NEXT interval
+    server_data.print();
     server_data.get_data(charging_times_in_mins_arr, NBR_OF_INTERVALS);
     charging_mode = server_data.get_charging_mode();
 
-      if (charging_mode == CHARGING_MODE_DEFAULT)
-      {
-        Serial.println("@@@@@ Charging mode == DEFAULT_MODE, syncing with server");
-        sync_with_server(&curr_interval_idx,
-                        &time_left_to_next_interval_mins,
-                        &time_to_charge_mins,
-                        charging_times_in_mins_arr,
-                        http_handler_global);
-      }
+
+    if (charging_mode == CHARGING_MODE_DEFAULT)
+    {
+      Serial.println("@@@@@ Charging mode == DEFAULT_MODE, syncing with server");
+      sync_with_server(&curr_interval_idx,
+                      &time_left_to_next_interval_mins,
+                      &time_to_charge_mins,
+                      charging_times_in_mins_arr,
+                      http_handler_global);
+    }
   }
 
   current_millis = millis();
@@ -329,6 +331,7 @@ void init_WiFi_server()
   }
   server.on("/", server_handle_root);
   server.on("/serverIP", get_server_ip_addr);
+  server.on("/userData", HTTP_POST, recv_charging_times_from_user);
   server.begin();
 }
 

@@ -2,48 +2,37 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include "../global_vars/global_vars.h"
+#include "../http_handler/http_handler.h"
+#include "../../include/error_constants.h"
 
+// /serverIP
 void get_server_ip_addr()
 {
-    Serial.println("#######################################");
-    Serial.println("#######################################");
-    Serial.println("########## GETTING CONNECTION #########"); 
-    Serial.println("#######################################");
-    Serial.println("#######################################");
     server.send(200, "text/plain", WiFi.localIP().toString().c_str());
 }
 
+// /userData
 void recv_charging_times_from_user()
 {
-    Serial.print("Number of args in POST request: ");
-    Serial.println(server.args());
-
-    Serial.println("------- host header -------");
-    Serial.println(server.hostHeader());
-
-    if (server.hasArg("userData"))
+    if (server.hasArg(PLAIN_KEY))
     {
-        Serial.println("#######################################");
-        Serial.println("request has USER_DATA arg");
-        Serial.println(server.arg("userData"));
-        Serial.println("#######################################");
-    }
+        JsonDocument json_doc;
+        static char recv_buff[1024] = {0}; 
 
-    if (server.hasArg("body"))
+        server.arg(PLAIN_KEY).toCharArray(recv_buff, 1024);
+
+        if (HttpHandler::handle_json_deserialization(json_doc, recv_buff) != SUCCESS)
+        {
+            server.send(400, "text/plain", "Rcvd data json deserialization error");
+            Serial.println("[recv_chargin_times_from_user] json deserialization error");
+            return;
+        }
+        server_data.set_data(json_doc, CHARGING_DATA_KEY, CHARGING_MODE_KEY); 
+        server.send(200, "text/plain", "Data received");
+    }
+    else 
     {
-        Serial.println("#######################################");
-        Serial.println("request has BODY arg:");
-        Serial.println(server.arg("body"));
-        Serial.println("#######################################");
+        server.send(400, "text/plain", "no plain arg in post request");
     }
-
-    if (server.hasArg("plain"))
-    {
-        Serial.println("#######################################");
-        Serial.println("request has PLAIN arg:");
-        Serial.println(server.arg("plain"));
-        Serial.println("#######################################");
-    }
-
     Serial.flush();
 }

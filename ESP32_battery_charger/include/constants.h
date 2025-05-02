@@ -26,6 +26,9 @@ constexpr int SERIAL_BAUD_RATE = 115200;
 constexpr const char *CHARGING_TIME_KEY = "chargingTime";
 constexpr const char *IS_CHARGING = "isCharging";
 constexpr const char *CURR_TIME = "currTime";
+constexpr const char *PLAIN_KEY = "plain";
+constexpr const char *CHARGING_DATA_KEY = "chargingData";
+constexpr const char *CHARGING_MODE_KEY = "chargingMode";
 
 // ----------TIME CONSTANTS----------
 constexpr int INTERVAL_60S_MILLIS = 60000;
@@ -55,6 +58,9 @@ constexpr int RETRY_NBR = 5;
 constexpr int ARR_LEN = 96;
 constexpr int NBR_OF_INTERVALS = 96;
 constexpr int REC_DATA_BUFF_SIZE = 1024;
+constexpr int MAX_ARR_VAL = 15;
+constexpr int MIN_ARR_VAL = 0;
+
 
 
 #endif // CONSTANTS_H

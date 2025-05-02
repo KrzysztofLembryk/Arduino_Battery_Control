@@ -12,6 +12,6 @@ constexpr const int ERROR_GET_FAILED = 7;
 constexpr const int ERROR_GET_COULDNT_RECV_DATA = 8;
 constexpr const int ERROR_GET_UNABLE_TO_CONNECT = 9;
 constexpr const int ERROR_NULLPTR = 10;
-
+constexpr const int ERROR_JSON_KEY_NOT_PRESENT = 11;
 
 #endif // ERROR_CONSTANTS_H

@@ -24,6 +24,7 @@ public:
     // int get_curr_time(TimeHandler &time_handler,
     //                     const char *server_name, 
     //                     const char *endpoint_name);
+    static int handle_json_deserialization(JsonDocument &doc, char *src_buff);
 
 private:
     // CLASS CONSTANTS
@@ -40,7 +41,6 @@ private:
     // PRIVATE METHODS
     int get_data(const char *server_name, const char *endpoint_name);
     int handle_incoming_data_stream();
-    int handle_json_deserialization(JsonDocument &doc);
     int get_data_to_json(JsonDocument &doc,
                         const char *server_name, 
                         const char *endpoint_name);

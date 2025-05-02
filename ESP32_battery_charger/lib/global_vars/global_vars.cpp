@@ -18,11 +18,70 @@ int ServerData::set_data(char buff[], int buff_size)
     if (buff_size > this->RECV_BUFF_SIZE)
         return ERROR_MORE_DATA_THAN_BUFF_SIZE;
 
-    memcpy(m_recv_buff, buff, buff_size);
+    memcpy(m_charging_times_arr, buff, buff_size);
     m_recvd_data_size = buff_size;
     m_new_data_recvd = true;
 
     return SUCCESS;
+}
+
+int ServerData::set_data(JsonDocument &json_doc,
+                         const char *data_key,
+                         const char *mode_key)
+{
+    /**
+     * If under data_key there is an array we check its size and iterate through
+     * it and update charging_times_arr with user defined values,
+     */
+    if (json_doc[data_key].is<JsonArray>())
+    {
+        JsonArray array = json_doc[data_key].as<JsonArray>();
+
+        // arr_len in our case should always be 96, if it's not we don't update
+        // our charging_times_arr
+        int arr_len = array.size();
+
+        if (arr_len == this->RECV_BUFF_SIZE)
+        {
+
+            for (int i = 0; i < arr_len; i++)
+            {
+                int new_val = json_doc[data_key][i].as<int>();
+
+                // We want to make sure that charging times are always in 
+                // interval: [MIN_ARR_VAL, MAX_ARR_VAL], so if we got wrong value
+                // from server we just make it either max or min
+                m_charging_times_arr[i] = new_val > MAX_ARR_VAL 
+                                                    ? MAX_ARR_VAL
+                                                    : (new_val < MIN_ARR_VAL 
+                                                        ? MIN_ARR_VAL 
+                                                        : new_val);
+            }
+
+            m_recvd_data_size = arr_len;
+            m_new_data_recvd = true;
+        }
+    } 
+    else 
+    {
+        return ERROR_JSON_KEY_NOT_PRESENT;
+    }
+
+    if (json_doc[mode_key].is<int>())
+    {
+        int mode = json_doc[mode_key].as<int>();
+        m_charging_mode = (
+            mode == CHARGING_MODE_DEFAULT 
+            || mode == CHARGING_MODE_USER
+            || mode == CHARGING_MODE_USER_WITH_TIMEOUT) 
+                ? mode : CHARGING_MODE_DEFAULT;
+    }
+    else 
+    {
+        m_charging_mode = CHARGING_MODE_DEFAULT;
+    }
+
+    return ERROR_JSON_KEY_NOT_PRESENT;
 }
 
 int ServerData::get_data(int dest[], int dest_size)
@@ -33,21 +92,42 @@ int ServerData::get_data(int dest[], int dest_size)
         return ERROR_NULLPTR;
     if (dest_size < m_recvd_data_size)
         return ERROR_DEST_SIZE_TO_SMALL;
-    
+
     // for (int i = 0; i < m_recvd_data_size; i++)
     // {
-    //     dest[i] = 
+    //     dest[i] =
     // }
-    memcpy(dest, m_recv_buff, m_recvd_data_size);
+    memcpy(dest, m_charging_times_arr, m_recvd_data_size);
 
-    m_recvd_data_size = 0;
-
-    memset(m_recv_buff, 0, this->RECV_BUFF_SIZE);
-    
+    // after getting data from server_data we do not clear charging_times_arr
+    // and recvd_data_size so that we remember last user's choice
     return SUCCESS;
 }
 
 int ServerData::get_charging_mode() const
 {
     return m_charging_mode;
+}
+
+void ServerData::print() const
+{
+    Serial.println("----- ServerData State -----");
+    Serial.print("Received Data Size: ");
+    Serial.println(m_recvd_data_size);
+
+    Serial.print("New Data Received: ");
+    Serial.println(m_new_data_recvd ? "true" : "false");
+
+    Serial.print("Charging Mode: ");
+    Serial.println(m_charging_mode);
+
+    Serial.println("Charging Times Array:");
+    for (int i = 0; i < m_recvd_data_size; i++)
+    {
+        Serial.print("Index ");
+        Serial.print(i);
+        Serial.print(": ");
+        Serial.println(m_charging_times_arr[i]);
+    }
+    Serial.println("----------------------------");
 }

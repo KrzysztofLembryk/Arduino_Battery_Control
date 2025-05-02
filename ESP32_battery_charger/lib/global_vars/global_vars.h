@@ -2,6 +2,7 @@
 #define GLOBAL_VARS_H
 
 #include <WebServer.h>
+#include <ArduinoJson.h>
 #include "../../include/constants.h"
 
 class ServerData;
@@ -18,12 +19,14 @@ public:
 
     bool is_new_data_received() const;
     int set_data(char buff[], int buff_size);
+    int set_data(JsonDocument &json_doc, const char *key);
     int get_data(int dest[], int dest_size);
     int get_charging_mode() const;
+    void print() const;
 
 private:
-    static constexpr const int RECV_BUFF_SIZE = 1024;
-    char m_recv_buff[RECV_BUFF_SIZE];
+    static constexpr const int RECV_BUFF_SIZE = 96;
+    int m_charging_times_arr[RECV_BUFF_SIZE];
     int m_recvd_data_size;
     bool m_new_data_recvd;
     int m_charging_mode;

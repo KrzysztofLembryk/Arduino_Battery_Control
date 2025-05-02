@@ -6,7 +6,7 @@
 // --------------PUBLIC METHODS IMPL--------------
 
 // int HttpHandler::get_curr_time(TimeHandler &time_handler,
-//                                 const char *server_name, 
+//                                 const char *server_name,
 //                                 const char *endpoint_name)
 // {
 //     JsonDocument json_doc;
@@ -14,7 +14,7 @@
 
 //     if (ret_code != SUCCESS)
 //         return ret_code;
-    
+
 //     time_handler.extract_HM_time_from_json(json_doc);
 //     time_handler.print_time();
 
@@ -26,14 +26,14 @@ constexpr const char *MINUTES_TILL_NEXT_INTERVAL = "minutesTillNextInterval";
 
 /**
  * If function encounters error variables:
- * - curr_charging_interval_idx 
- * - time_till_next_interval 
+ * - curr_charging_interval_idx
+ * - time_till_next_interval
  * ARE NOT MODIFIED
  */
 int HttpHandler::get_curr_interval(int *curr_charging_interval_idx,
-                                    int *time_till_next_interval,
-                                    const char *server_name, 
-                                    const char *endpoint_name)
+                                   int *time_till_next_interval,
+                                   const char *server_name,
+                                   const char *endpoint_name)
 {
     Serial.println("get curr interval");
     JsonDocument json_doc;
@@ -44,7 +44,7 @@ int HttpHandler::get_curr_interval(int *curr_charging_interval_idx,
         Serial.println("get curr interval getting data to json ERROR");
         return ret_code;
     }
-    
+
     *curr_charging_interval_idx = json_doc[CURR_INTERVAL_IDX].as<int>();
     *time_till_next_interval = json_doc[MINUTES_TILL_NEXT_INTERVAL].as<int>();
 
@@ -57,10 +57,10 @@ int HttpHandler::get_curr_interval(int *curr_charging_interval_idx,
  * IS NOT MODIFIED
  */
 int HttpHandler::get_charging_data(int charging_times_arr[],
-                                    int arr_len,
-                                    const char *charging_time_key, 
-                                    const char *server_name, 
-                                    const char *endpoint_name)
+                                   int arr_len,
+                                   const char *charging_time_key,
+                                   const char *server_name,
+                                   const char *endpoint_name)
 {
     JsonDocument json_doc;
     int ret_code = get_data_to_json(json_doc, server_name, endpoint_name);
@@ -70,15 +70,15 @@ int HttpHandler::get_charging_data(int charging_times_arr[],
 
     for (int i = 0; i < arr_len; i++)
         charging_times_arr[i] = json_doc[charging_time_key][i].as<int>();
-    
+
     return SUCCESS;
 }
 
 // --------------PRIVATE METHODS IMPL--------------
 
 int HttpHandler::get_data_to_json(JsonDocument &json_doc,
-                                    const char *server_name, 
-                                    const char *endpoint_name)
+                                  const char *server_name,
+                                  const char *endpoint_name)
 {
     Serial.println("get data to json");
     int recv_data_error = get_data(server_name, endpoint_name);
@@ -86,13 +86,17 @@ int HttpHandler::get_data_to_json(JsonDocument &json_doc,
     if (recv_data_error != SUCCESS)
         return recv_data_error;
 
-    recv_data_error = handle_json_deserialization(json_doc);
+    recv_data_error = HttpHandler::handle_json_deserialization(json_doc,
+                                                               recv_buff);
 
     return recv_data_error;
 }
 
 /**
- * Function when encountering any error tries RETRY_NBR times to fetch data from server, if still unsuccessful it propagates error further 
+ * Function connects with server and does GET request to fetch data from given
+ * endpoint using data stream.
+ * When encountering any error tries RETRY_NBR times to fetch data from server, 
+ * if still unsuccessful it propagates error further.
  * --> Returns:
  * - ERROR_GET_COULDNT_RECV_DATA - when httpCode > 0 but not OK or MOVED_PERMANENTLY
  * - ERROR_GET_FAILED - when httpCode < 0
@@ -102,14 +106,14 @@ int HttpHandler::get_data_to_json(JsonDocument &json_doc,
 int HttpHandler::get_data(const char *server_name, const char *endpoint_name)
 {
     /**
-     * CharArrUtils::concat_char_arr creates a string (URL) from 
+     * CharArrUtils::concat_char_arr creates a string (URL) from
      * server_name, endpoint_name and stores it in server_endpoint_name
      */
     int ret_val = CharArrUtils::concat_char_arr(server_endpoint_name,
                                                 server_name,
                                                 endpoint_name,
                                                 SERVER_ENDPOINT_MAX_LEN);
-    
+
     if (ret_val != SUCCESS)
         return ret_val;
 
@@ -135,7 +139,7 @@ int HttpHandler::get_data(const char *server_name, const char *endpoint_name)
                     Serial.println("HANDLING INCOMING DATA STREAM");
                     ret_val = handle_incoming_data_stream();
                 }
-                else 
+                else
                 {
                     Serial.printf("[HTTP] GET... couldn't receive data\n");
                     ret_val = ERROR_GET_COULDNT_RECV_DATA;
@@ -153,7 +157,7 @@ int HttpHandler::get_data(const char *server_name, const char *endpoint_name)
         else
         {
             Serial.println("[HTTP] Unable to connect");
-            ret_val =  ERROR_GET_UNABLE_TO_CONNECT;
+            ret_val = ERROR_GET_UNABLE_TO_CONNECT;
         }
 
         if (ret_val != SUCCESS)
@@ -212,22 +216,21 @@ int HttpHandler::handle_incoming_data_stream()
             delay_counter = 0;
 
             int bytes_read = stream->readBytes(recv_buff + shift,
-                                    available_size > RECV_BUFF_SIZE - shift ? 
-                                    RECV_BUFF_SIZE - shift : available_size);
+                                               available_size > RECV_BUFF_SIZE - shift ? RECV_BUFF_SIZE - shift : available_size);
 
             if (incoming_data_size > 0)
             {
                 incoming_data_size -= bytes_read;
             }
-            
-            // we always shift by available_size since in bytes_read we have 
-            // if statement thus we can maximally read RECV_BUFF_SIZE bytes to 
+
+            // we always shift by available_size since in bytes_read we have
+            // if statement thus we can maximally read RECV_BUFF_SIZE bytes to
             // recv_buff, thus if (shift > RECV_BUFF_SIZE) would never be true
             // if we added bytes_read to shift
             shift += available_size;
             recv_data_size = shift;
         }
-        else if (curr_time - prev_time >= 100) 
+        else if (curr_time - prev_time >= 100)
         {
             /**
              * WiFi connection is slow and might take more than 1s to get data
@@ -260,9 +263,10 @@ int HttpHandler::handle_incoming_data_stream()
  * - ERROR_DESERIALIZE_JSON if deserialization was unsuccessful,
  * - SUCCESS otherwise
  */
-int HttpHandler::handle_json_deserialization(JsonDocument &json_doc)
+int HttpHandler::handle_json_deserialization(JsonDocument &json_doc,
+                                             char *src_buff)
 {
-    DeserializationError json_error = deserializeJson(json_doc, recv_buff);
+    DeserializationError json_error = deserializeJson(json_doc, src_buff);
 
     if (json_error)
     {

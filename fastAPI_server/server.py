@@ -16,10 +16,11 @@ async def arduino_ip():
 
 @app.get("/sendUserData")
 async def user_data():
-    json_data = {"userData": [np.random.randint(6, 9) for x in range(96)]}
-    res = await requests.api.post("/userData", json=json_data)
-    print(f"/sendUserData res: {res}")
-    return res
+    json_data = {"chargingData": [np.random.randint(6, 9) for x in range(96)],
+                 "chargingMode": 1}
+    res = requests.api.post("http://192.168.43.147/userData", json=json_data)
+    print(f"/sendUserData res: {res.text}")
+    return res.text
 
 
 @app.get("/chargingData")
