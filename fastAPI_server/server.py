@@ -4,8 +4,23 @@ import pandas as pd
 import numpy as np
 import sys
 import datetime
+import requests
 
 app = FastAPI()
+
+@app.get("/arduinoIP")
+async def arduino_ip():
+    res = requests.get("http://192.168.43.147/serverIP")
+    print(f"##### /arduinoIP res type {type(res)}, value: {res.text} #####")
+    return res.text
+
+@app.get("/sendUserData")
+async def user_data():
+    json_data = {"userData": [np.random.randint(6, 9) for x in range(96)]}
+    res = await requests.api.post("/userData", json=json_data)
+    print(f"/sendUserData res: {res}")
+    return res
+
 
 @app.get("/chargingData")
 async def root():

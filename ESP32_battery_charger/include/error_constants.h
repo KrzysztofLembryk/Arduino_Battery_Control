@@ -11,6 +11,7 @@ constexpr const int ERROR_EXCEEDED_WAIT_TIME_FOR_DATA_FROM_SERVER = 6;
 constexpr const int ERROR_GET_FAILED = 7;
 constexpr const int ERROR_GET_COULDNT_RECV_DATA = 8;
 constexpr const int ERROR_GET_UNABLE_TO_CONNECT = 9;
+constexpr const int ERROR_NULLPTR = 10;
 
 
 #endif // ERROR_CONSTANTS_H
