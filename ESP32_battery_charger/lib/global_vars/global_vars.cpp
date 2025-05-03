@@ -11,19 +11,19 @@ bool ServerData::is_new_data_received() const
     return this->m_new_data_recvd;
 }
 
-int ServerData::set_data(char buff[], int buff_size)
-{
-    if (buff == nullptr)
-        return ERROR_NULLPTR;
-    if (buff_size > this->RECV_BUFF_SIZE)
-        return ERROR_MORE_DATA_THAN_BUFF_SIZE;
+// int ServerData::set_data(char buff[], int buff_size)
+// {
+//     if (buff == nullptr)
+//         return ERROR_NULLPTR;
+//     if (buff_size > this->RECV_BUFF_SIZE)
+//         return ERROR_MORE_DATA_THAN_BUFF_SIZE;
 
-    memcpy(m_charging_times_arr, buff, buff_size);
-    m_recvd_data_size = buff_size;
-    m_new_data_recvd = true;
+//     memcpy(m_charging_times_arr, buff, buff_size);
+//     m_recvd_data_size = buff_size;
+//     m_new_data_recvd = true;
 
-    return SUCCESS;
-}
+//     return SUCCESS;
+// }
 
 int ServerData::set_data(JsonDocument &json_doc,
                          const char *data_key,
@@ -31,19 +31,19 @@ int ServerData::set_data(JsonDocument &json_doc,
 {
     /**
      * If under data_key there is an array we check its size and iterate through
-     * it and update charging_times_arr with user defined values,
+     * it and update charging_times_arr with user defined values, if there is 
+     * no array or it has wrong size we return error 
      */
     if (json_doc[data_key].is<JsonArray>())
     {
         JsonArray array = json_doc[data_key].as<JsonArray>();
 
         // arr_len in our case should always be 96, if it's not we don't update
-        // our charging_times_arr
+        // our charging_times_arr and return error
         int arr_len = array.size();
 
         if (arr_len == this->RECV_BUFF_SIZE)
         {
-
             for (int i = 0; i < arr_len; i++)
             {
                 int new_val = json_doc[data_key][i].as<int>();
@@ -59,29 +59,45 @@ int ServerData::set_data(JsonDocument &json_doc,
             }
 
             m_recvd_data_size = arr_len;
+
+            Serial.println("m_recv_data_size from json: ");
+            Serial.print(m_recvd_data_size);
+            Serial.println();
+
             m_new_data_recvd = true;
         }
+        else 
+            return ERROR_JSON_WRONG_RECVD_ARR_SIZE;
     } 
     else 
-    {
-        return ERROR_JSON_KEY_NOT_PRESENT;
-    }
+        return ERROR_JSON_UNDER_DATA_KEY_NOT_ARRAY;
 
+    /**
+     * If there is no mode_key or mode_key value is not within the scope we 
+     * change flag new_data_recvd to false and return error, since we dont want
+     * our main to see that there was a request with wrong data 
+     */
     if (json_doc[mode_key].is<int>())
     {
         int mode = json_doc[mode_key].as<int>();
-        m_charging_mode = (
-            mode == CHARGING_MODE_DEFAULT 
+        if (mode == CHARGING_MODE_DEFAULT 
             || mode == CHARGING_MODE_USER
             || mode == CHARGING_MODE_USER_WITH_TIMEOUT) 
-                ? mode : CHARGING_MODE_DEFAULT;
+        {
+            m_charging_mode = mode;
+        }
+        else 
+        {
+            m_new_data_recvd = false;
+            return ERROR_JSON_UNSUPPORTED_MODE_RCVD;
+        }
     }
     else 
     {
-        m_charging_mode = CHARGING_MODE_DEFAULT;
+        m_new_data_recvd = false;
+        return ERROR_JSON_NO_MODE_KEY;
     }
-
-    return ERROR_JSON_KEY_NOT_PRESENT;
+    return SUCCESS;
 }
 
 int ServerData::get_data(int dest[], int dest_size)
@@ -91,13 +107,16 @@ int ServerData::get_data(int dest[], int dest_size)
     if (dest == nullptr)
         return ERROR_NULLPTR;
     if (dest_size < m_recvd_data_size)
+    {
+        Serial.println("[ERROR] get_data dest_size < m_recvd_data_size");
         return ERROR_DEST_SIZE_TO_SMALL;
+    }
 
-    // for (int i = 0; i < m_recvd_data_size; i++)
-    // {
-    //     dest[i] =
-    // }
-    memcpy(dest, m_charging_times_arr, m_recvd_data_size);
+    for (int i = 0; i < m_recvd_data_size; i++)
+    {
+        dest[i] = m_charging_times_arr[i];
+    }
+    // memcpy(dest, m_charging_times_arr, m_recvd_data_size);
 
     // after getting data from server_data we do not clear charging_times_arr
     // and recvd_data_size so that we remember last user's choice
@@ -124,10 +143,8 @@ void ServerData::print() const
     Serial.println("Charging Times Array:");
     for (int i = 0; i < m_recvd_data_size; i++)
     {
-        Serial.print("Index ");
-        Serial.print(i);
-        Serial.print(": ");
-        Serial.println(m_charging_times_arr[i]);
+        Serial.print(m_charging_times_arr[i]);
+        Serial.print(", ");
     }
-    Serial.println("----------------------------");
+    Serial.println("\n----------------------------");
 }

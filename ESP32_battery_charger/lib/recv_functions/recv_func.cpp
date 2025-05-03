@@ -7,7 +7,7 @@ int handle_error_ret_code(int ret_code);
 // int recv_curr_time(HttpHandler &http_handler, TimeHandler &time_handler)
 // {
 //     int ret_code = http_handler.get_curr_time(time_handler,
-//                                               SERVER_ADDRESS,
+//                                               REMOTE_SERVER_ADDRESS,
 //                                               CURR_TIME_ENDPOINT);
 
 //     if (ret_code == SUCCESS)
@@ -25,8 +25,8 @@ int recv_curr_interval(int *curr_charging_interval_idx,
 {
   int ret_code = http_handler.get_curr_interval(curr_charging_interval_idx,
                                                 time_till_next_interval,
-                                                SERVER_ADDRESS,
-                                                CURR_INTERVAL_ENDPOINT);
+                                                REMOTE_SERVER_ADDRESS,
+                                                ENDPOINT_REMOTE_CURR_INTERVAL);
 
   if (ret_code == SUCCESS)
   {
@@ -44,8 +44,8 @@ int recv_charging_data(int charging_times_arr[],
   int ret_code = http_handler.get_charging_data(charging_times_arr,
                                                 NBR_OF_INTERVALS,
                                                 CHARGING_TIME_KEY,
-                                                SERVER_ADDRESS,
-                                                CHARGING_DATA_ENDPOINT);
+                                                REMOTE_SERVER_ADDRESS,
+                                                ENDPOINT_REMOTE_CHARGING_DATA);
   if (ret_code == SUCCESS)
   {
     Serial.println("###SUCCESS - data received###\nPrinting data:");

@@ -7,7 +7,9 @@ might be quite long, in order not to allow our arduino to reset  we
 should use yield 
 
 ## TODO
-- rewrite TCP handling with asyncTCP lib
+- change all global constants to pointers with allocated memory so that we can 
+remotely change them via given endpoint
+- rewrite TCP handling with asyncTCP lib 
 
 ## ESP8266 01S datasheet
 https://www.xecor.com/blog/esp-01-pinout-programming-datasheet-and-comparison
@@ -26,12 +28,5 @@ https://arduinojson.org/v6/how-to/reuse-a-json-document/
 - StaticJson/DynamicJson is deprecated!!
 
 ## Plan
-- Wysłanie z serwera 96 wierszy ładować/nieładować + ile ładować - GIT
-- co n minut 
-- sprawdzanie aktualnego czasu jaki jest i w odpowiednim momencie wysłanie 
-zapytania do serwera
-- przerobic na stream http client get
-- sprawdzanie czasu zeby wiedziec kiedy wlaczyc prad a kiedy nie
 - HTTPS i szyfrowanie 
 - przerwania do komunikacji z WiFi
-- jakieś UI lepsze

@@ -2,13 +2,15 @@
 #define CONSTANTS_H
 
 // ----------REMOTE SERVER ENDPOINTS----------
-constexpr const char *SERVER_ADDRESS = "http://192.168.43.112:8000";
-constexpr const char *CHARGING_DATA_ENDPOINT = "/chargingData";
-// constexpr const char *CURR_TIME_ENDPOINT = "/currTime";
-constexpr const char *CURR_INTERVAL_ENDPOINT = "/currInterval";
+constexpr const char *REMOTE_SERVER_ADDRESS = "http://192.168.43.112:8000";
+constexpr const char *ENDPOINT_REMOTE_CHARGING_DATA = "/chargingData";
+constexpr const char *ENDPOINT_REMOTE_CURR_INTERVAL = "/currInterval";
 
 // ----------LOCAL SERVER CONSTANTS----------
 constexpr int LOCAL_SERVER_PORT = 80;
+
+constexpr const char *ENDPOINT_LOCAL_SERVER_IP = "/serverIP";
+constexpr const char *ENDPOINT_LOCAL_USER_DATA = "/userData";
 
 // We use only charging times from global server
 constexpr int CHARGING_MODE_DEFAULT = 0; 

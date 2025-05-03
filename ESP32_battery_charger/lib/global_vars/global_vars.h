@@ -18,14 +18,14 @@ public:
     ~ServerData() = default;
 
     bool is_new_data_received() const;
-    int set_data(char buff[], int buff_size);
-    int set_data(JsonDocument &json_doc, const char *key);
+    // int set_data(char buff[], int buff_size);
+    int set_data(JsonDocument &json_doc, const char *key, const char *mode_key);
     int get_data(int dest[], int dest_size);
     int get_charging_mode() const;
     void print() const;
 
 private:
-    static constexpr const int RECV_BUFF_SIZE = 96;
+    static constexpr const int RECV_BUFF_SIZE = NBR_OF_INTERVALS;
     int m_charging_times_arr[RECV_BUFF_SIZE];
     int m_recvd_data_size;
     bool m_new_data_recvd;

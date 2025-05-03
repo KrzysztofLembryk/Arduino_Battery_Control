@@ -13,5 +13,9 @@ constexpr const int ERROR_GET_COULDNT_RECV_DATA = 8;
 constexpr const int ERROR_GET_UNABLE_TO_CONNECT = 9;
 constexpr const int ERROR_NULLPTR = 10;
 constexpr const int ERROR_JSON_KEY_NOT_PRESENT = 11;
+constexpr const int ERROR_JSON_UNDER_DATA_KEY_NOT_ARRAY = 12;
+constexpr const int ERROR_JSON_WRONG_RECVD_ARR_SIZE = 13;
+constexpr const int ERROR_JSON_NO_MODE_KEY = 14;
+constexpr const int ERROR_JSON_UNSUPPORTED_MODE_RCVD = 15;
 
 #endif // ERROR_CONSTANTS_H

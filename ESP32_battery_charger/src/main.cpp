@@ -75,12 +75,21 @@ void loop()
 
   if (server_data.is_new_data_received())
   {
+    Serial.println("###### NEW DATA RECEIVED FROM USER ######");
     // For now to make it easier if we get charing data from client, changes are
     // visible from the NEXT interval
     server_data.print();
     server_data.get_data(charging_times_in_mins_arr, NBR_OF_INTERVALS);
     charging_mode = server_data.get_charging_mode();
 
+    Serial.println("NEW DATA:");
+    for (int i = 0; i < NBR_OF_INTERVALS; i++)
+    {
+
+      Serial.print(charging_times_in_mins_arr[i]);
+      Serial.print(" ");
+    }
+    Serial.println();
 
     if (charging_mode == CHARGING_MODE_DEFAULT)
     {
@@ -289,6 +298,7 @@ int sync_with_server(int *curr_interval_idx,
   *time_to_charge = charging_times_arr[*curr_interval_idx];
 
   Serial.printf("###############\ntime_to_charge: %d, curr interval idx: %d, time to next interval: %d\n###############\n", *time_to_charge, *curr_interval_idx, *time_left_to_next_interval);
+  Serial.println("---------END SYNCING---------");
 
   return SUCCESS;
 }
@@ -330,8 +340,8 @@ void init_WiFi_server()
     Serial.println("MDNS responder started");
   }
   server.on("/", server_handle_root);
-  server.on("/serverIP", get_server_ip_addr);
-  server.on("/userData", HTTP_POST, recv_charging_times_from_user);
+  server.on(ENDPOINT_LOCAL_SERVER_IP, get_server_ip_addr);
+  server.on(ENDPOINT_LOCAL_USER_DATA, HTTP_POST, recv_charging_times_from_user);
   server.begin();
 }
 
