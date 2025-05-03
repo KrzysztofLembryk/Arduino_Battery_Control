@@ -11,7 +11,7 @@
 #include "recv_func.h"
 #include "routes.h"
 
-// ----------FUNCTIONS PRE-DECLARATION----------
+// ----------FUNCTIONS PRE-DECLARATIONS----------
 void wait_for_few_seconds();
 void init_WiFi_client();
 void init_WiFi_server();
@@ -36,6 +36,9 @@ int do_battery_turn_on_off(int *curr_interval_idx,
                            int charging_times_arr[],
                            int charging_mode,
                            HttpHandler &http_handler);
+
+// void handle_server_events();
+
 void server_handle_root();
 
 // ----------HANDLER CLASSES OBJECTS-----------
@@ -71,6 +74,9 @@ void loop()
   static int charging_mode = CHARGING_MODE_DEFAULT;
 
   // ----------MAIN PROGRAM LOOP----------
+
+  // code regarding handling server should and will go to seperate function
+  // ----------------------------------------------------------------------
   server.handleClient();
 
   if (server_data.is_new_data_received())
@@ -101,6 +107,7 @@ void loop()
                       http_handler_global);
     }
   }
+  // ----------------------------------------------------------------------
 
   current_millis = millis();
 

@@ -68,8 +68,19 @@ int HttpHandler::get_charging_data(int charging_times_arr[],
     if (ret_code != SUCCESS)
         return ret_code;
 
+    int new_val;
     for (int i = 0; i < arr_len; i++)
-        charging_times_arr[i] = json_doc[charging_time_key][i].as<int>();
+    {
+        new_val = json_doc[charging_time_key][i].as<int>();
+
+        // We check if data from server is within [0, 15] range, since in 
+        // 15 minutes we cannot charge battery for more than 15 minutes.
+        charging_times_arr[i] = new_val > MAX_ARR_VAL 
+                                        ? MAX_ARR_VAL
+                                        : (new_val < MIN_ARR_VAL 
+                                            ? MIN_ARR_VAL 
+                                            : new_val);
+    }
 
     return SUCCESS;
 }
