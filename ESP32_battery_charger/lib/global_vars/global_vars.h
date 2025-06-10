@@ -3,12 +3,15 @@
 
 #include <WebServer.h>
 #include <ArduinoJson.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+
 #include "../../include/constants.h"
 
 class ServerData;
 
 // ----------GLOBAL VARIABLES----------
-extern WebServer server;
+extern AsyncWebServer server;
 extern ServerData server_data;
 
 class ServerData

@@ -21,8 +21,6 @@
 //     return SUCCESS;
 // }
 
-constexpr const char *CURR_INTERVAL_IDX = "currIntervalIdx";
-constexpr const char *MINUTES_TILL_NEXT_INTERVAL = "minutesTillNextInterval";
 
 /**
  * If function encounters error variables:
@@ -45,8 +43,20 @@ int HttpHandler::get_curr_interval(int *curr_charging_interval_idx,
         return ret_code;
     }
 
+    if (!json_doc.containsKey(CURR_INTERVAL_IDX))
+    {
+        Serial.println("JSON document missing CURR_INTERVAL_IDX key");
+        return ERROR_JSON_MISSING_KEY;  
+    }
+
+    if (!json_doc.containsKey(MILLIS_TILL_NEXT_INTERVAL))
+    {
+        Serial.println("JSON document missing MILLIS_TILL_NEXT_INTERVAL key");
+        return ERROR_JSON_MISSING_KEY;
+    }
+
     *curr_charging_interval_idx = json_doc[CURR_INTERVAL_IDX].as<int>();
-    *time_till_next_interval = json_doc[MINUTES_TILL_NEXT_INTERVAL].as<int>();
+    *time_till_next_interval = json_doc[MILLIS_TILL_NEXT_INTERVAL].as<int>();
 
     return SUCCESS;
 }
@@ -68,13 +78,20 @@ int HttpHandler::get_charging_data(int charging_times_arr[],
     if (ret_code != SUCCESS)
         return ret_code;
 
+    if (!json_doc.containsKey(charging_time_key))
+    {
+        Serial.println("JSON document missing key");
+        return ERROR_JSON_MISSING_KEY;  
+    }
+
     int new_val;
     for (int i = 0; i < arr_len; i++)
     {
         new_val = json_doc[charging_time_key][i].as<int>();
 
-        // We check if data from server is within [0, 15] range, since in 
+        // We check if data from server is within [-15, 15] range, since in 
         // 15 minutes we cannot charge battery for more than 15 minutes.
+        // By -15 minutes we mean selling energy
         charging_times_arr[i] = new_val > MAX_ARR_VAL 
                                         ? MAX_ARR_VAL
                                         : (new_val < MIN_ARR_VAL 

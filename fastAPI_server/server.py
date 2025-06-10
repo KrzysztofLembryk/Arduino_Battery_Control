@@ -16,8 +16,11 @@ async def arduino_ip():
 
 @app.get("/sendUserData")
 async def user_data():
+    # TUTAJ MUSIMY JESZCZE PRZESYŁAĆ AKTUALNY INDEX, moment czasu w którym
+    # jesteśmy!!!!!
     json_data = {"chargingData": [np.random.randint(6, 9) for x in range(96)],
                  "chargingMode": 0}
+
     res = requests.api.post("http://192.168.43.147/userData", json=json_data)
     print(f"/sendUserData res: {res.text}")
     return res.text
@@ -39,15 +42,30 @@ async def root():
     return  json_data
 
 
+
 @app.get("/currInterval")
 async def get_curr_time():
+    """
+    Returns the current 15-minute interval index and milliseconds until the next interval.
+    Using milliseconds provides much more precise timing for the microcontroller.
+    """
     now = datetime.datetime.now()
+    
     # Total minutes since 0:00
     total_minutes = now.hour * 60 + now.minute  
     curr_interval_idx = total_minutes // 15  
-
-    # Minutes until the next interval
-    minutes_till_next_interval = 15 - (total_minutes % 15)  
-    print(f"#### currIntervalIdx {curr_interval_idx}, minutesTillNext {minutes_till_next_interval}, curr_time: {now}####")
+    
+    # Calculate the exact time of the next interval
+    minutes_in_current_interval = total_minutes % 15
+    seconds_in_minute = now.second
+    microseconds = now.microsecond
+    
+    # Total milliseconds until next interval
+    # +1000 buffer to accomodate for the time it takes to process the request
+    # or some network delay etx
+    milliseconds_till_next = ((14 - minutes_in_current_interval) * 60 + (59 - seconds_in_minute)) * 1000 + (1000000 - microseconds) // 1000 + 1000
+    
+    print(f"#### currIntervalIdx {curr_interval_idx}, msTillNext {milliseconds_till_next}, curr_time: {now}####")
+    
     return {"currIntervalIdx": curr_interval_idx,
-            "minutesTillNextInterval": minutes_till_next_interval}
+            "millisTillNextInterval": milliseconds_till_next}

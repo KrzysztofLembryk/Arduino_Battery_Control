@@ -1,15 +1,13 @@
 # Arduino_Battery_Control
 
-## PROBLEM WITH ARDUINO RESETTING after uploading programme
--  My experience with yield() for the ESP8266 is because the core libraries have implemented the watchdog timer. If you take too long in the loop() function (around 1 sec I think) the WDT will cause a hardware reset. One thing that yield() does is reset the WDT timer.
-- So because WiFi connection might not be the fastest and waiting times
-might be quite long, in order not to allow our arduino to reset  we 
-should use yield 
-
-## TODO
+## NEW TODO 6.05.2025
+- Make wifi either AP_STA mode or switching between two modes
 - change all global constants to pointers with allocated memory so that we can 
 remotely change them via given endpoint
-- rewrite TCP handling with asyncTCP lib 
+- rewrite WebServer to ESPAsyncWebServer !!!! If async we need MUTEX for ServerData
+
+## ESPAsyncWebServer - github, documentation
+https://github.com/ESP32Async/ESPAsyncWebServer/wiki#why-should-you-care
 
 ## ESP8266 01S datasheet
 https://www.xecor.com/blog/esp-01-pinout-programming-datasheet-and-comparison
@@ -27,6 +25,8 @@ https://arduinojson.org/v6/how-to/reuse-a-json-document/
 - we shouldn't reuse JsonDocument
 - StaticJson/DynamicJson is deprecated!!
 
-## Plan
-- HTTPS i szyfrowanie 
-- przerwania do komunikacji z WiFi
+## PROBLEM WITH ARDUINO RESETTING after uploading programme
+-  My experience with yield() for the ESP8266 is because the core libraries have implemented the watchdog timer. If you take too long in the loop() function (around 1 sec I think) the WDT will cause a hardware reset. One thing that yield() does is reset the WDT timer.
+- So because WiFi connection might not be the fastest and waiting times
+might be quite long, in order not to allow our arduino to reset  we 
+should use yield 

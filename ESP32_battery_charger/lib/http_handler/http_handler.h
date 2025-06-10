@@ -21,9 +21,6 @@ public:
                         const char *server_name, 
                         const char *endpoint_name);
 
-    // int get_curr_time(TimeHandler &time_handler,
-    //                     const char *server_name, 
-    //                     const char *endpoint_name);
     static int handle_json_deserialization(JsonDocument &doc, char *src_buff);
 
 private:

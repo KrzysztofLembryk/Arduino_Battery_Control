@@ -3,7 +3,7 @@
 
 // Here we define global variables so that there are no multiple definitions
 // of them
-WebServer server(LOCAL_SERVER_PORT);
+AsyncWebServer server(LOCAL_SERVER_PORT);
 ServerData server_data;
 
 bool ServerData::is_new_data_received() const
