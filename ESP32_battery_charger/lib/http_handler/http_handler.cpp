@@ -43,13 +43,14 @@ int HttpHandler::get_curr_interval(int *curr_charging_interval_idx,
         return ret_code;
     }
 
-    if (!json_doc.containsKey(CURR_INTERVAL_IDX))
+    // The .is<int>() method checks both that the key exists and that its value is of the expected type
+    if (!json_doc[CURR_INTERVAL_IDX].is<int>())
     {
         Serial.println("JSON document missing CURR_INTERVAL_IDX key");
         return ERROR_JSON_MISSING_KEY;  
     }
 
-    if (!json_doc.containsKey(MILLIS_TILL_NEXT_INTERVAL))
+    if (!json_doc[MILLIS_TILL_NEXT_INTERVAL].is<int>())
     {
         Serial.println("JSON document missing MILLIS_TILL_NEXT_INTERVAL key");
         return ERROR_JSON_MISSING_KEY;
@@ -78,7 +79,7 @@ int HttpHandler::get_charging_data(int charging_times_arr[],
     if (ret_code != SUCCESS)
         return ret_code;
 
-    if (!json_doc.containsKey(charging_time_key))
+    if (!json_doc[charging_time_key].is<JsonArray>())
     {
         Serial.println("JSON document missing key");
         return ERROR_JSON_MISSING_KEY;  

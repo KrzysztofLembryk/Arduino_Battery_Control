@@ -16,8 +16,6 @@ async def arduino_ip():
 
 @app.get("/sendUserData")
 async def user_data():
-    # TUTAJ MUSIMY JESZCZE PRZESYŁAĆ AKTUALNY INDEX, moment czasu w którym
-    # jesteśmy!!!!!
     json_data = {"chargingData": [np.random.randint(6, 9) for x in range(96)],
                  "chargingMode": 0}
 

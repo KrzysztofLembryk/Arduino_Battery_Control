@@ -3,6 +3,7 @@
 #include <HTTPClient.h>
 #include <ESPmDNS.h>
 #include <ArduinoJson.h>
+#include <AsyncJson.h>
 #include "../lib/global_vars/global_vars.h"
 #include "constants.h"
 #include "error_constants.h"
@@ -37,10 +38,9 @@ int do_battery_turn_on_off(int *curr_interval_idx,
                            int charging_mode,
                            HttpHandler &http_handler);
 
-
 // ----------HANDLER CLASSES OBJECTS-----------
 // Currently dont know why it is global, probably somewhere in the past
-// implementation was a little different and needed to be global-TODO change it 
+// implementation was a little different and needed to be global-TODO change it
 HttpHandler http_handler_global;
 
 void setup()
@@ -97,10 +97,10 @@ void loop()
     {
       Serial.println("@@@@@ Charging mode == DEFAULT_MODE, syncing with server");
       sync_with_server(&curr_interval_idx,
-                      &time_left_to_next_interval_ms,
-                      &time_to_charge_mins,
-                      charging_times_arr_mins,
-                      http_handler_global);
+                       &time_left_to_next_interval_ms,
+                       &time_to_charge_mins,
+                       charging_times_arr_mins,
+                       http_handler_global);
     }
   }
   // ----------------------------------------------------------------------
@@ -130,9 +130,7 @@ void handle_battery_turn_on_off(unsigned long *time_to_next_event_ms,
   // ----------FLOW CONTROL VARIABLES----------
   static bool first_loop = true;
 
-  if (!first_loop 
-      || charging_mode == CHARGING_MODE_USER 
-      || charging_mode == CHARGING_MODE_USER_WITH_TIMEOUT)
+  if (!first_loop || charging_mode == CHARGING_MODE_USER || charging_mode == CHARGING_MODE_USER_WITH_TIMEOUT)
   {
     do_battery_turn_on_off(curr_interval_idx,
                            time_to_next_event_ms, time_left_to_next_interval_ms,
@@ -149,8 +147,8 @@ void handle_battery_turn_on_off(unsigned long *time_to_next_event_ms,
      * If sync_with_server or do_battery_turn_on_off fails we set
      * time_to_next_event to 0 and dont change first_loop to false, because we
      * want to ensure that we fetch data SUCCESSFULLY during first loop
-     * 
-     * If before first loop user managed to change charging_mode to USER mode, 
+     *
+     * If before first loop user managed to change charging_mode to USER mode,
      * we don't go into this else branch.
      */
     Serial.println("FIRST LOOOP");
@@ -197,10 +195,10 @@ int do_battery_turn_on_off(int *curr_interval_idx,
 
     if (charging_mode == CHARGING_MODE_DEFAULT &&
         (*curr_interval_idx == SYNC_SERVER_0000_IDX ||
-        *curr_interval_idx == SYNC_SERVER_0600_IDX ||
-        *curr_interval_idx == SYNC_SERVER_1200_IDX ||
-        *curr_interval_idx == SYNC_SERVER_1715_IDX ||
-        *curr_interval_idx == SYNC_SERVER_2200_IDX))
+         *curr_interval_idx == SYNC_SERVER_0600_IDX ||
+         *curr_interval_idx == SYNC_SERVER_1200_IDX ||
+         *curr_interval_idx == SYNC_SERVER_1715_IDX ||
+         *curr_interval_idx == SYNC_SERVER_2200_IDX))
     {
       // in battery_turn_on_off if sync_with_server fails, we don't care we just
       // continue with data we already have till the next sync with server
@@ -213,7 +211,7 @@ int do_battery_turn_on_off(int *curr_interval_idx,
       {
         Serial.println("[do_battery_turn_on_off] FAILED to sync with server");
         *time_left_to_next_interval_ms = FULL_INTERVAL_DURATION_MS;
-        *time_to_charge_ms = charging_times_arr_mins[*curr_interval_idx] * INTERVAL_60S_MS;
+        *time_to_charge_ms = charging_times_arr_mins[*curr_interval_idx] * INTERVAL_10S_MS;
       }
     }
     else
@@ -223,7 +221,7 @@ int do_battery_turn_on_off(int *curr_interval_idx,
        * to 15 mintues, and time_to_charge we get from charging_times_array
        */
       *time_left_to_next_interval_ms = FULL_INTERVAL_DURATION_MS;
-      *time_to_charge_ms = charging_times_arr_mins[*curr_interval_idx] * INTERVAL_60S_MS;
+      *time_to_charge_ms = charging_times_arr_mins[*curr_interval_idx] * INTERVAL_10S_MS;
     }
   }
 
@@ -298,7 +296,7 @@ int sync_with_server(int *curr_interval_idx,
     return ERROR;
   }
 
-  *time_to_charge_ms = charging_times_arr_mins[*curr_interval_idx] * INTERVAL_60S_MS;
+  *time_to_charge_ms = charging_times_arr_mins[*curr_interval_idx] * INTERVAL_10S_MS;
 
   Serial.printf("###############\ntime_to_charge: %d, curr interval idx: %d, time to next interval: %d\n###############\n", *time_to_charge_ms, *curr_interval_idx, *time_left_to_next_interval_ms);
   Serial.println("---------END SYNCING---------");
@@ -344,17 +342,24 @@ void init_local_server()
     Serial.println("MDNS responder started");
   }
 
-  server.on("/", HTTP_GET, 
-    [] (AsyncWebServerRequest *request) {get_user_interface(request);}
-  );
+  server.on("/", HTTP_GET,
+            [](AsyncWebServerRequest *request)
+            { get_user_interface(request); });
 
-  server.on(ENDPOINT_LOCAL_SERVER_IP, HTTP_GET, 
-    [] (AsyncWebServerRequest *request) {get_server_ip_addr(request);}
-  );
+  server.on(ENDPOINT_LOCAL_SERVER_IP, HTTP_GET,
+            [](AsyncWebServerRequest *request)
+            { get_server_ip_addr(request); });
 
-  server.on(ENDPOINT_LOCAL_USER_DATA, HTTP_POST,
-  [] (AsyncWebServerRequest *request) {recv_charging_times_from_user(request);}
-  );
+  AsyncCallbackJsonWebHandler *recv_data_from_user_handler = 
+    new AsyncCallbackJsonWebHandler(ENDPOINT_LOCAL_USER_DATA,
+        [] (AsyncWebServerRequest *request, JsonVariant &json)
+        {
+          recv_charging_times_from_user(request, json);
+        });
+  server.addHandler(recv_data_from_user_handler);
+  // server.on(ENDPOINT_LOCAL_USER_DATA, HTTP_POST,
+  //           [](AsyncWebServerRequest *request)
+  //           { recv_charging_times_from_user(request); });
 
   server.begin();
 }

@@ -1,7 +1,6 @@
 #ifndef GLOBAL_VARS_H
 #define GLOBAL_VARS_H
 
-#include <WebServer.h>
 #include <ArduinoJson.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
@@ -22,7 +21,7 @@ public:
 
     bool is_new_data_received() const;
     // int set_data(char buff[], int buff_size);
-    int set_data(JsonDocument &json_doc, const char *key, const char *mode_key);
+    int set_data(JsonObject &json_obj, const char *key, const char *mode_key);
     int get_data(int dest[], int dest_size);
     int get_charging_mode() const;
     void print() const;

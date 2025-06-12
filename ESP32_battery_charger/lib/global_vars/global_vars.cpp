@@ -25,7 +25,7 @@ bool ServerData::is_new_data_received() const
 //     return SUCCESS;
 // }
 
-int ServerData::set_data(JsonDocument &json_doc,
+int ServerData::set_data(JsonObject &json_obj,
                          const char *data_key,
                          const char *mode_key)
 {
@@ -34,9 +34,9 @@ int ServerData::set_data(JsonDocument &json_doc,
      * it and update charging_times_arr with user defined values, if there is 
      * no array or it has wrong size we return error 
      */
-    if (json_doc[data_key].is<JsonArray>())
+    if (json_obj[data_key].is<JsonArray>())
     {
-        JsonArray array = json_doc[data_key].as<JsonArray>();
+        JsonArray array = json_obj[data_key].as<JsonArray>();
 
         // arr_len in our case should always be 96, if it's not we don't update
         // our charging_times_arr and return error
@@ -46,7 +46,7 @@ int ServerData::set_data(JsonDocument &json_doc,
         {
             for (int i = 0; i < arr_len; i++)
             {
-                int new_val = json_doc[data_key][i].as<int>();
+                int new_val = json_obj[data_key][i].as<int>();
 
                 // We want to make sure that charging times are always in 
                 // interval: [MIN_ARR_VAL, MAX_ARR_VAL], so if we got wrong value
@@ -77,9 +77,9 @@ int ServerData::set_data(JsonDocument &json_doc,
      * change flag new_data_recvd to false and return error, since we dont want
      * our main to see that there was a request with wrong data 
      */
-    if (json_doc[mode_key].is<int>())
+    if (json_obj[mode_key].is<int>())
     {
-        int mode = json_doc[mode_key].as<int>();
+        int mode = json_obj[mode_key].as<int>();
         if (mode == CHARGING_MODE_DEFAULT 
             || mode == CHARGING_MODE_USER
             || mode == CHARGING_MODE_USER_WITH_TIMEOUT) 

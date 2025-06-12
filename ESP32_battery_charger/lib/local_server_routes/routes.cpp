@@ -1,5 +1,6 @@
 #include "routes.h"
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <WiFi.h>
 #include "../global_vars/global_vars.h"
 #include "../http_handler/http_handler.h"
@@ -14,32 +15,66 @@ void get_server_ip_addr(AsyncWebServerRequest *request)
     request->send(HTTP_CODE_OK, "text/plain", WiFi.localIP().toString().c_str());
 }
 
+void printRequestDetails(AsyncWebServerRequest *request) {
+  // Basic request info
+  Serial.println("\n-------- REQUEST DETAILS --------");
+  Serial.printf("Method: %s\n", request->methodToString());
+  Serial.printf("URL: %s\n", request->url().c_str());
+  Serial.printf("Host: %s\n", request->host().c_str());
+  Serial.printf("Content Type: %s\n", request->contentType().c_str());
+  Serial.printf("Content Length: %d\n", request->contentLength());
+  
+  // Headers
+  Serial.println("\n-------- HEADERS --------");
+  int headers = request->headers();
+  for(int i=0; i<headers; i++) {
+    const AsyncWebHeader* h = request->getHeader(i);
+    Serial.printf("Header[%s]: %s\n", h->name().c_str(), h->value().c_str());
+  }
+  
+  // URL Parameters (GET parameters)
+  Serial.println("\n-------- URL PARAMETERS --------");
+  int params = request->params();
+  for(int i=0; i<params; i++) {
+    const AsyncWebParameter* p = request->getParam(i);
+    Serial.printf("Parameter[%s]: %s\n", p->name().c_str(), p->value().c_str());
+  }
+  
+  // POST parameters
+  Serial.println("\n-------- POST PARAMETERS --------");
+  int postParams = request->params();
+  for(int i=0; i<postParams; i++) {
+    const AsyncWebParameter* p = request->getParam(i);
+    if(p) {
+      Serial.printf("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
+    }
+  }
+  
+  // Request body (for POST/PUT with JSON or other raw data)
+  if(request->hasParam("plain", true)) {
+    Serial.println("\n-------- REQUEST BODY --------");
+    Serial.println(request->getParam("plain", true)->value());
+  }
+  
+  Serial.println("\n--------------------------------");
+  Serial.flush();
+}
+
+
 // /userData
-void recv_charging_times_from_user(AsyncWebServerRequest *request)
+void recv_charging_times_from_user(AsyncWebServerRequest *request, 
+                                    JsonVariant &json)
 {
-    if (request->hasArg(PLAIN_KEY))
-    {
-        JsonDocument json_doc;
-        static char recv_buff[1024] = {0};
+    // Serial.println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+    // Serial.println("@@@@@@@@RECV DATA FROM USER@@@@@@@@");
+    // Serial.println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+    // printRequestDetails(request);
+    JsonObject json_obj = json.as<JsonObject>();
 
-        request->arg(PLAIN_KEY).toCharArray(recv_buff, 1024);
-
-        if (HttpHandler::handle_json_deserialization(json_doc, recv_buff) != SUCCESS)
-        {
-            request->send(HTTP_CODE_BAD_REQUEST, "text/plain", "Rcvd data json deserialization error");
-            return;
-        }
-
-        memset(recv_buff, 0, 1024);
-        handle_set_data_ret_code(server_data.set_data(json_doc,
-                                            CHARGING_DATA_KEY,
-                                            CHARGING_MODE_KEY), request);
-    }
-    else
-    {
-        request->send(HTTP_CODE_BAD_REQUEST, "text/plain", "No plain arg in post request");
-    }
-    Serial.flush();
+    handle_set_data_ret_code(server_data.set_data(json_obj,
+                                        CHARGING_DATA_KEY,
+                                        CHARGING_MODE_KEY), request);
+    return;
 }
 
 

@@ -4,7 +4,8 @@
 - Make wifi either AP_STA mode or switching between two modes
 - change all global constants to pointers with allocated memory so that we can 
 remotely change them via given endpoint
-- rewrite WebServer to ESPAsyncWebServer !!!! If async we need MUTEX for ServerData
+- If async we need MUTEX for ServerData
+- 
 
 ## ESPAsyncWebServer - github, documentation
 https://github.com/ESP32Async/ESPAsyncWebServer/wiki#why-should-you-care
