@@ -16,7 +16,7 @@ extern ServerData server_data;
 class ServerData
 {
 public:
-    ServerData() : m_recvd_data_size(0), m_new_data_recvd(false), m_charging_mode(CHARGING_MODE_DEFAULT) {}
+    ServerData() : m_recvd_data_size(0), m_new_data_recvd(false), m_charging_mode(CHARGING_MODE_DEFAULT), m_mutex(xSemaphoreCreateMutex()) {}
     ~ServerData() = default;
 
     bool is_new_data_received() const;
@@ -32,6 +32,7 @@ private:
     int m_recvd_data_size;
     bool m_new_data_recvd;
     int m_charging_mode;
+    SemaphoreHandle_t m_mutex;
 };
 
 #endif // GLOBAL_VARS_H

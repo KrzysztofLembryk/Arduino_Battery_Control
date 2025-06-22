@@ -73,7 +73,8 @@ void recv_charging_times_from_user(AsyncWebServerRequest *request,
 
     handle_set_data_ret_code(server_data.set_data(json_obj,
                                         CHARGING_DATA_KEY,
-                                        CHARGING_MODE_KEY), request);
+                                        CHARGING_MODE_KEY), 
+                                        request);
     return;
 }
 

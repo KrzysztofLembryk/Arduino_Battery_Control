@@ -1,4 +1,5 @@
 # Arduino_Battery_Control
+- AsyncWebServer docs: https://github.com/ESP32Async/ESPAsyncWebServer/wiki#remove-handlers-and-rewrites
 
 ## NEW TODO 6.05.2025
 - Make wifi either AP_STA mode or switching between two modes

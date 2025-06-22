@@ -18,5 +18,6 @@ constexpr const int ERROR_JSON_WRONG_RECVD_ARR_SIZE = 13;
 constexpr const int ERROR_JSON_NO_MODE_KEY = 14;
 constexpr const int ERROR_JSON_UNSUPPORTED_MODE_RCVD = 15;
 constexpr const int ERROR_JSON_MISSING_KEY = 16;
+constexpr const int ERROR_SEMAPHORE_TIMEOUT = 17;
 
 #endif // ERROR_CONSTANTS_H

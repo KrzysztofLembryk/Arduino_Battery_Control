@@ -8,7 +8,17 @@ ServerData server_data;
 
 bool ServerData::is_new_data_received() const
 {
-    return this->m_new_data_recvd;
+    if (xSemaphoreTake(m_mutex, portMAX_DELAY) == pdTRUE) 
+    {
+        volatile bool ret_val = m_new_data_recvd;
+        xSemaphoreGive(m_mutex);
+        return ret_val;
+    }
+    else
+    {
+        Serial.println("[ERROR] - is_new_data_received - Semaphore TIMEOUT");
+        return false; 
+    }
 }
 
 // int ServerData::set_data(char buff[], int buff_size)
@@ -30,121 +40,178 @@ int ServerData::set_data(JsonObject &json_obj,
                          const char *mode_key)
 {
     /**
-     * If under data_key there is an array we check its size and iterate through
-     * it and update charging_times_arr with user defined values, if there is 
-     * no array or it has wrong size we return error 
+     * We use mutex since we have Async server thus there might be race 
+     * conditions. When trying to take semaphore thread will wait indefinitely 
+     * if needed.
      */
-    if (json_obj[data_key].is<JsonArray>())
+    if (xSemaphoreTake(m_mutex, portMAX_DELAY) == pdTRUE) 
     {
-        JsonArray array = json_obj[data_key].as<JsonArray>();
-
-        // arr_len in our case should always be 96, if it's not we don't update
-        // our charging_times_arr and return error
-        int arr_len = array.size();
-
-        if (arr_len == this->RECV_BUFF_SIZE)
+        int ret_val = SUCCESS;
+        /**
+         * If under data_key there is an array we check its size and iterate 
+         * through it and update charging_times_arr with user defined values, 
+         * if there is no array or it has wrong size we return error 
+         */
+        if (json_obj[data_key].is<JsonArray>())
         {
-            for (int i = 0; i < arr_len; i++)
+            JsonArray array = json_obj[data_key].as<JsonArray>();
+
+            // arr_len in our case should always be 96, if it's not we don't update
+            // our charging_times_arr and return error
+            int arr_len = array.size();
+
+            if (arr_len == this->RECV_BUFF_SIZE)
             {
-                int new_val = json_obj[data_key][i].as<int>();
+                for (int i = 0; i < arr_len; i++)
+                {
+                    int new_val = json_obj[data_key][i].as<int>();
 
-                // We want to make sure that charging times are always in 
-                // interval: [MIN_ARR_VAL, MAX_ARR_VAL], so if we got wrong value
-                // from server we just make it either max or min
-                m_charging_times_arr[i] = new_val > MAX_ARR_VAL 
-                                                    ? MAX_ARR_VAL
-                                                    : (new_val < MIN_ARR_VAL 
-                                                        ? MIN_ARR_VAL 
-                                                        : new_val);
+                    // We want to make sure that charging times are always in 
+                    // interval: [MIN_ARR_VAL, MAX_ARR_VAL], so if we got wrong value
+                    // from server we just make it either max or min
+                    m_charging_times_arr[i] = new_val > MAX_ARR_VAL 
+                                                        ? MAX_ARR_VAL
+                                                        : (new_val < MIN_ARR_VAL 
+                                                            ? MIN_ARR_VAL 
+                                                            : new_val);
+                }
+
+                m_recvd_data_size = arr_len;
+
+                Serial.println("m_recv_data_size from json: ");
+                Serial.print(m_recvd_data_size);
+                Serial.println();
+
+                m_new_data_recvd = true;
             }
-
-            m_recvd_data_size = arr_len;
-
-            Serial.println("m_recv_data_size from json: ");
-            Serial.print(m_recvd_data_size);
-            Serial.println();
-
-            m_new_data_recvd = true;
-        }
+            else 
+                ret_val = ERROR_JSON_WRONG_RECVD_ARR_SIZE;
+        } 
         else 
-            return ERROR_JSON_WRONG_RECVD_ARR_SIZE;
-    } 
-    else 
-        return ERROR_JSON_UNDER_DATA_KEY_NOT_ARRAY;
+            ret_val = ERROR_JSON_UNDER_DATA_KEY_NOT_ARRAY;
 
-    /**
-     * If there is no mode_key or mode_key value is not within the scope we 
-     * change flag new_data_recvd to false and return error, since we dont want
-     * our main to see that there was a request with wrong data 
-     */
-    if (json_obj[mode_key].is<int>())
-    {
-        int mode = json_obj[mode_key].as<int>();
-        if (mode == CHARGING_MODE_DEFAULT 
-            || mode == CHARGING_MODE_USER
-            || mode == CHARGING_MODE_USER_WITH_TIMEOUT) 
+        if (ret_val != SUCCESS) 
         {
-            m_charging_mode = mode;
+            xSemaphoreGive(m_mutex);
+            return ret_val;
+        }
+
+        /**
+         * If there is no mode_key or mode_key value is not within the scope we 
+         * change flag new_data_recvd to false and return error, since we dont 
+         * want our main to see that there was a request with wrong data 
+         */
+        if (json_obj[mode_key].is<int>())
+        {
+            int mode = json_obj[mode_key].as<int>();
+            if (mode == CHARGING_MODE_DEFAULT 
+                || mode == CHARGING_MODE_USER
+                || mode == CHARGING_MODE_USER_WITH_TIMEOUT) 
+            {
+                m_charging_mode = mode;
+            }
+            else 
+            {
+                m_new_data_recvd = false;
+                ret_val = ERROR_JSON_UNSUPPORTED_MODE_RCVD;
+            }
         }
         else 
         {
             m_new_data_recvd = false;
-            return ERROR_JSON_UNSUPPORTED_MODE_RCVD;
+            ret_val = ERROR_JSON_NO_MODE_KEY;
         }
+
+        xSemaphoreGive(m_mutex);
+
+        return ret_val;
     }
     else 
     {
-        m_new_data_recvd = false;
-        return ERROR_JSON_NO_MODE_KEY;
+        Serial.println("[ERROR] - set_data - Semaphore TIMEOUT");
+        return ERROR_SEMAPHORE_TIMEOUT;
     }
-    return SUCCESS;
 }
 
 int ServerData::get_data(int dest[], int dest_size)
 {
-    m_new_data_recvd = false;
 
-    if (dest == nullptr)
-        return ERROR_NULLPTR;
-    if (dest_size < m_recvd_data_size)
+    if (xSemaphoreTake(m_mutex, portMAX_DELAY) == pdTRUE) 
     {
-        Serial.println("[ERROR] get_data dest_size < m_recvd_data_size");
-        return ERROR_DEST_SIZE_TO_SMALL;
-    }
+        m_new_data_recvd = false;
 
-    for (int i = 0; i < m_recvd_data_size; i++)
+        if (dest == nullptr)
+        {
+            xSemaphoreGive(m_mutex);
+            return ERROR_NULLPTR;
+        }
+        if (dest_size < m_recvd_data_size)
+        {
+            Serial.println("[ERROR] get_data dest_size < m_recvd_data_size");
+            xSemaphoreGive(m_mutex);
+            return ERROR_DEST_SIZE_TO_SMALL;
+        }
+
+        for (int i = 0; i < m_recvd_data_size; i++)
+        {
+            dest[i] = m_charging_times_arr[i];
+        }
+        // memcpy(dest, m_charging_times_arr, m_recvd_data_size);
+
+        // after getting data from server_data we do not clear charging_times_arr
+        // and recvd_data_size so that we remember last user's choice
+        xSemaphoreGive(m_mutex);
+        return SUCCESS;
+    }
+    else 
     {
-        dest[i] = m_charging_times_arr[i];
+        Serial.println("[ERROR] - get_data - Semaphore TIMEOUT");
+        return ERROR_SEMAPHORE_TIMEOUT;
     }
-    // memcpy(dest, m_charging_times_arr, m_recvd_data_size);
-
-    // after getting data from server_data we do not clear charging_times_arr
-    // and recvd_data_size so that we remember last user's choice
-    return SUCCESS;
 }
 
 int ServerData::get_charging_mode() const
 {
-    return m_charging_mode;
+    if (xSemaphoreTake(m_mutex, portMAX_DELAY) == pdTRUE) 
+    {
+        volatile int ret_val = m_charging_mode;
+        xSemaphoreGive(m_mutex);
+        return ret_val;
+    }
+    else 
+    {
+        Serial.println("[ERROR] - get_charging_mode - Semaphore TIMEOUT");
+        return ERROR_SEMAPHORE_TIMEOUT;
+    }
 }
 
 void ServerData::print() const
 {
-    Serial.println("----- ServerData State -----");
-    Serial.print("Received Data Size: ");
-    Serial.println(m_recvd_data_size);
-
-    Serial.print("New Data Received: ");
-    Serial.println(m_new_data_recvd ? "true" : "false");
-
-    Serial.print("Charging Mode: ");
-    Serial.println(m_charging_mode);
-
-    Serial.println("Charging Times Array:");
-    for (int i = 0; i < m_recvd_data_size; i++)
+    if (xSemaphoreTake(m_mutex, portMAX_DELAY) == pdTRUE) 
     {
-        Serial.print(m_charging_times_arr[i]);
-        Serial.print(", ");
+        Serial.println("----- ServerData State -----");
+        Serial.print("Received Data Size: ");
+        Serial.println(m_recvd_data_size);
+
+        Serial.print("New Data Received: ");
+        Serial.println(m_new_data_recvd ? "true" : "false");
+
+        Serial.print("Charging Mode: ");
+        Serial.println(m_charging_mode);
+
+        Serial.println("Charging Times Array:");
+        for (int i = 0; i < m_recvd_data_size; i++)
+        {
+            Serial.print(m_charging_times_arr[i]);
+            Serial.print(", ");
+        }
+        Serial.println("\n----------------------------");
+        Serial.flush();
+
+        xSemaphoreGive(m_mutex);
     }
-    Serial.println("\n----------------------------");
+    else 
+    {
+        Serial.println("[ERROR] - print - Semaphore TIMEOUT");
+    } 
 }

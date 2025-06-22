@@ -357,9 +357,10 @@ void init_local_server()
           recv_charging_times_from_user(request, json);
         });
   server.addHandler(recv_data_from_user_handler);
-  // server.on(ENDPOINT_LOCAL_USER_DATA, HTTP_POST,
-  //           [](AsyncWebServerRequest *request)
-  //           { recv_charging_times_from_user(request); });
+
+  server.onNotFound([](AsyncWebServerRequest *request){
+    request->send(HTTP_CODE_NOT_FOUND, "text/plain", "Endpoint not found");
+  });
 
   server.begin();
 }
