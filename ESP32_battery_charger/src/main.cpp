@@ -225,7 +225,7 @@ int do_battery_turn_on_off(int *curr_interval_idx,
     }
   }
 
-  if (*time_left_to_next_interval_ms < *time_to_charge_ms)
+  if (*time_left_to_next_interval_ms < abs(*time_to_charge_ms))
   {
     /**
      * This case means we have more time_to_charge in current interval than
@@ -239,9 +239,14 @@ int do_battery_turn_on_off(int *curr_interval_idx,
      * !!! WE SHOULD ALWAYS MULTIPLY BY CONSTANT INTERVAL_60S_MILLIS !!!
      * #################################################################
      */
-    Serial.println("###############CHARGING START###############");
-    Serial.println("time_to_charge: " + String(*time_to_charge_ms) +
-                   ", time_left_to_next_interval: " + String(*time_left_to_next_interval_ms));
+
+    if (*time_to_charge_ms > 0)
+      Serial.println("###############CHARGING START###############");
+    else 
+      Serial.println("###############SELLING START###############");
+
+    Serial.println("time_to_charge[ms]: " + String(*time_to_charge_ms) +
+                  ", time_left_to_next_interval[ms]: " + String(*time_left_to_next_interval_ms));
 
     *time_to_next_event_ms = *time_left_to_next_interval_ms;
     *time_left_to_next_interval_ms = 0;
@@ -270,11 +275,16 @@ int do_battery_turn_on_off(int *curr_interval_idx,
        * time_to_charge BUT we also substract time_to_charge from
        * time_left_to_next_interval
        */
-      Serial.println("###############CHARGING START###############");
-      Serial.println("time_to_charge: " + String(*time_to_charge_ms) +
-                     ", time_left_to_next_interval: " + String(*time_left_to_next_interval_ms));
-      *time_left_to_next_interval_ms -= *time_to_charge_ms;
-      *time_to_next_event_ms = *time_to_charge_ms;
+      if (*time_to_charge_ms > 0)
+        Serial.println("###############CHARGING START###############");
+      else 
+        Serial.println("###############SELLING START###############");
+
+      Serial.println("time_to_charge[ms]: " + String(*time_to_charge_ms) +
+                     ", time_left_to_next_interval[ms]: " + String(*time_left_to_next_interval_ms));
+                     
+      *time_left_to_next_interval_ms -= abs(*time_to_charge_ms);
+      *time_to_next_event_ms = abs(*time_to_charge_ms);
       *time_to_charge_ms = 0;
     }
   }

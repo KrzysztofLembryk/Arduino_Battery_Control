@@ -116,7 +116,7 @@ int HttpHandler::get_data_to_json(JsonDocument &json_doc,
         return recv_data_error;
 
     recv_data_error = HttpHandler::handle_json_deserialization(json_doc,
-                                                               recv_buff);
+                                                               m_recv_buff);
 
     return recv_data_error;
 }
@@ -138,7 +138,7 @@ int HttpHandler::get_data(const char *server_name, const char *endpoint_name)
      * CharArrUtils::concat_char_arr creates a string (URL) from
      * server_name, endpoint_name and stores it in server_endpoint_name
      */
-    int ret_val = CharArrUtils::concat_char_arr(server_endpoint_name,
+    int ret_val = CharArrUtils::concat_char_arr(m_server_endpoint_name,
                                                 server_name,
                                                 endpoint_name,
                                                 SERVER_ENDPOINT_MAX_LEN);
@@ -151,11 +151,11 @@ int HttpHandler::get_data(const char *server_name, const char *endpoint_name)
     // If we encounter error we try again for RETRY_NBR times
     while (loop_nbr < RETRY_NBR)
     {
-        if (http.begin(client, server_endpoint_name))
+        if (m_http.begin(m_client, m_server_endpoint_name))
         {
             Serial.print("[HTTP] GET...\n");
             // start connection and send HTTP header
-            int httpCode = http.GET();
+            int httpCode = m_http.GET();
 
             // httpCode will be negative on error
             if (httpCode > 0)
@@ -176,12 +176,12 @@ int HttpHandler::get_data(const char *server_name, const char *endpoint_name)
             }
             else
             {
-                Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
+                Serial.printf("[HTTP] GET... failed, error: %s\n", m_http.errorToString(httpCode).c_str());
                 ret_val = ERROR_GET_FAILED;
             }
 
             Serial.println("[HTTP] END");
-            http.end();
+            m_http.end();
         }
         else
         {
@@ -210,10 +210,10 @@ int HttpHandler::get_data(const char *server_name, const char *endpoint_name)
  */
 int HttpHandler::handle_incoming_data_stream()
 {
-    CharArrUtils::clear_arr(recv_buff, RECV_BUFF_SIZE);
+    CharArrUtils::clear_arr(m_recv_buff, RECV_BUFF_SIZE);
 
-    recv_data_size = 0;
-    int incoming_data_size = http.getSize();
+    m_recv_data_size = 0;
+    int incoming_data_size = m_http.getSize();
     Serial.printf("INCOMING DATA SIZE: %d\n", incoming_data_size);
     if (incoming_data_size > RECV_BUFF_SIZE)
     {
@@ -221,13 +221,13 @@ int HttpHandler::handle_incoming_data_stream()
         return ERROR_MORE_DATA_THAN_BUFF_SIZE;
     }
 
-    WiFiClient *stream = http.getStreamPtr();
+    WiFiClient *stream = m_http.getStreamPtr();
     int shift = 0;
     int delay_counter = 0;
     unsigned long prev_time = 0;
     unsigned long curr_time = 0;
     // incoming_data_size == -1 --> means no info
-    while (http.connected() &&
+    while (m_http.connected() &&
            (incoming_data_size > 0 || incoming_data_size == -1))
     {
         curr_time = millis();
@@ -244,7 +244,7 @@ int HttpHandler::handle_incoming_data_stream()
             // we zero delay counter since we got some data
             delay_counter = 0;
 
-            int bytes_read = stream->readBytes(recv_buff + shift,
+            int bytes_read = stream->readBytes(m_recv_buff + shift,
                                                available_size > RECV_BUFF_SIZE - shift ? RECV_BUFF_SIZE - shift : available_size);
 
             if (incoming_data_size > 0)
@@ -257,7 +257,7 @@ int HttpHandler::handle_incoming_data_stream()
             // recv_buff, thus if (shift > RECV_BUFF_SIZE) would never be true
             // if we added bytes_read to shift
             shift += available_size;
-            recv_data_size = shift;
+            m_recv_data_size = shift;
         }
         else if (curr_time - prev_time >= 100)
         {
@@ -282,7 +282,7 @@ int HttpHandler::handle_incoming_data_stream()
 
     // TODO - instead of recv_data_size we could probably use strlen(recv_buff)
     // since we will get null terminated string
-    Serial.printf("recv data size: %d\n", recv_data_size);
+    Serial.printf("recv data size: %d\n", m_recv_data_size);
     return SUCCESS;
 }
 
